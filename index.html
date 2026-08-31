@@ -42,9 +42,23 @@ main{max-width:640px;margin:0 auto;padding:16px 14px 24px}
 .screen.hidden{display:none}
 
 /* Today header */
+.today-head .daynav{display:flex;align-items:center;gap:10px}
+.today-head .navcenter{flex:1;min-width:0;text-align:center}
 .today-head .today-label{font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
-.today-head .today-date{font-size:17px;font-weight:600;margin-top:2px}
-.today-head .daynum{font-size:26px;font-weight:800;letter-spacing:-.6px;margin-top:5px}
+.today-head .today-date{font-size:16px;font-weight:600;margin-top:2px}
+.today-head .daynum-row{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.today-head .daynum{font-size:26px;font-weight:800;letter-spacing:-.6px}
+.navbtn{flex:none;width:40px;height:40px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  border-radius:12px;font-size:22px;line-height:1;cursor:pointer;box-shadow:var(--shadow);font-family:inherit}
+.navbtn:disabled{opacity:.3;cursor:default;box-shadow:none}
+.navbtn:not(:disabled):active{transform:scale(.94)}
+.today-jump{flex:none;font-size:13px;font-weight:700;color:var(--primary-ink);background:var(--chip-bg);
+  border:none;border-radius:99px;padding:6px 13px;cursor:pointer;font-family:inherit}
+.today-jump:active{transform:scale(.97)}
+.notice.past{background:rgba(70,130,240,.12);color:#3b7bd6;border-color:rgba(70,130,240,.35)}
+.hedit{margin-top:9px;font-size:12.5px;font-weight:700;color:var(--primary-ink);background:var(--chip-bg);
+  border:none;border-radius:8px;padding:7px 12px;cursor:pointer;font-family:inherit}
+.hedit:active{transform:scale(.98)}
 
 .banner{margin:14px 0;background:var(--alert-bg);color:var(--alert-ink);border:1px solid var(--alert-line);
   border-radius:12px;padding:11px 14px;font-size:14px;font-weight:600}
@@ -267,6 +281,7 @@ function nextAppt(){ const t=todayKey(); const up=sortedAppts().filter(a=>dayDif
 /* ---- Состояние ---- */
 let state = { startDate: DEFAULT_START, appointments: DEFAULT_APPTS.map(a=>({...a})), history:{} };
 let lastRenderedDay = ''; // для авто-обновления при смене реального дня
+let viewDate = todayKey(); // какой день показан на экране «Сегодня» (можно листать назад)
 function load(){
   try{
     const raw = localStorage.getItem(KEY);
@@ -343,36 +358,52 @@ function cardHTML(task, dateKey){
 
 /* ---- Экран «Сегодня» ---- */
 function renderToday(){
-  const k = todayKey(), start = state.startDate;
-  const cd = dayDiff(start, k) + 1;
+  const today = todayKey(), start = state.startDate, vk = viewDate;
+  const cd = dayDiff(start, vk) + 1;
+  const rel = dayDiff(vk, today);   // сколько дней назад (today − vk)
+  const isToday = rel === 0;
 
   let required=0, done=0;
-  for(const t of TASKS){ const st=statusOf(t,k); if(st.s==='active'){ required++; if(isChecked(t.id,k)) done++; } }
+  for(const t of TASKS){ const st=statusOf(t,vk); if(st.s==='active'){ required++; if(isChecked(t.id,vk)) done++; } }
   const pct = required ? Math.round(done/required*100) : 0;
   const allDone = required>0 && done===required;
 
-  // Баннер ближайшего приёма у врача
+  // Баннер ближайшего приёма у врача (всегда от сегодняшней даты)
   const na = nextAppt();
   let banner;
   if(na){
-    const d = dayDiff(k, na.date);
+    const d = dayDiff(today, na.date);
     banner = (d===0) ? '📅 Сегодня приём у врача — '+apptText(na)
                      : '📅 Ближайший приём у врача — '+apptText(na)+' · через '+d+' '+daysWord(d);
   } else {
     banner = '📅 Приёмы у врача не запланированы — добавьте в «Настройках»';
   }
 
-  const dateStr = cap(fmt(k,{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+  const dateStr = cap(fmt(vk,{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+  const relLabel = rel===0 ? 'сегодня' : rel===1 ? 'вчера' : (rel+' '+daysWord(rel)+' назад');
   let dayLabel;
-  if(cd<1){ const u=dayDiff(k,start); dayLabel = (u===1 ? 'Старт завтра' : 'Старт через '+u+' '+daysWord(u)); }
+  if(cd<1){ const u=dayDiff(vk,start); dayLabel = (u===1 ? 'Старт завтра' : 'Старт через '+u+' '+daysWord(u)); }
   else dayLabel = 'День '+cd+' курса';
 
+  // границы листания: от старта курса до сегодня
+  const lo = (dayDiff(start, today) >= 0) ? start : today;
+  const canPrev = dayDiff(lo, vk) > 0;
+  const canNext = dayDiff(vk, today) > 0;
+
   let html = '';
-  html += '<div class="today-head"><div class="today-label">Сегодня</div><div class="today-date">'+dateStr+'</div><div class="daynum">'+dayLabel+'</div></div>';
+  html += '<div class="today-head"><div class="daynav">'
+        + '<button class="navbtn" data-nav="prev"'+(canPrev?'':' disabled')+' aria-label="Предыдущий день">‹</button>'
+        + '<div class="navcenter"><div class="today-label">'+relLabel+'</div><div class="today-date">'+dateStr+'</div></div>'
+        + '<button class="navbtn" data-nav="next"'+(canNext?'':' disabled')+' aria-label="Следующий день">›</button>'
+        + '</div><div class="daynum-row"><span class="daynum">'+dayLabel+'</span>'
+        + (isToday ? '' : '<button class="today-jump" data-nav="today">Сегодня →</button>')
+        + '</div></div>';
+  if(!isToday) html += '<div class="notice past">✏️ Открыт прошлый день ('+relLabel+') — можно дотыкать пропущенные галочки, всё сохранится.</div>';
   if(cd<1) html += '<div class="notice">Курс начнётся '+fmt(start)+'. С этого дня пункты станут активными. Дату можно изменить в «Настройках».</div>';
   html += '<div class="banner">'+banner+'</div>';
   html += '<div class="summary"><div class="summary-row"><span>'
-        + (allDone?'🎉 Всё на сегодня выполнено':'Выполнено сегодня')
+        + (allDone ? (isToday?'🎉 Всё на сегодня выполнено':'🎉 Всё за этот день выполнено')
+                   : (isToday?'Выполнено сегодня':'Выполнено за день'))
         + '</span><span>'+done+' из '+required+'</span></div>'
         + '<div class="bar"><div class="bar-fill'+(allDone?' ok':'')+'" style="width:'+pct+'%"></div></div></div>';
 
@@ -380,7 +411,7 @@ function renderToday(){
     html += '<section class="block"><div class="block-head"><span class="block-icon">'+b.icon+'</span>'
           + '<span class="block-title">'+b.title+'</span><span class="block-sub">'+b.subtitle+'</span></div>';
     if(b.note) html += '<div class="block-note">'+b.note+'</div>';
-    for(const t of TASKS){ if(t.block===b.id) html += cardHTML(t, k); }
+    for(const t of TASKS){ if(t.block===b.id) html += cardHTML(t, vk); }
     html += '</section>';
   }
   document.getElementById('screen-today').innerHTML = html;
@@ -452,7 +483,8 @@ function renderHistory(){
     rows.push('<details class="hday"'+(dk===k?' open':'')+'><summary>'
       + '<span class="hdate">'+cap(fmt(dk,{weekday:'short',day:'numeric',month:'long'}))+' · день '+cd+'</span>'
       + '<span class="hcount'+okCls+'">'+done+' / '+req+'</span></summary>'
-      + '<div class="hbody">'+(names.length?names.map(n=>'✓ '+n).join('<br>'):'ничего не отмечено')+'</div></details>');
+      + '<div class="hbody">'+(names.length?names.map(n=>'✓ '+n).join('<br>'):'ничего не отмечено')
+      + '<br><button class="hedit" data-day="'+dk+'">✏️ Отмечать в этом дне</button></div></details>');
     if(rows.length>=200) break;
   }
   html += rows.join('');
@@ -537,7 +569,7 @@ function importData(e){
         state.startDate = p.startDate;
         state.appointments = Array.isArray(p.appointments) ? p.appointments : DEFAULT_APPTS.map(a=>({...a}));
         state.history = (p.history && typeof p.history==='object') ? p.history : {};
-        save(); go('today'); toast('Данные загружены');
+        save(); viewDate = todayKey(); go('today'); toast('Данные загружены');
       }
     }catch(err){ toast('⚠️ Не удалось прочитать файл'); }
     finally{ e.target.value=''; }
@@ -567,20 +599,40 @@ function toast(msg){
 
 /* ---- Переключение чекбокса (делегирование) ---- */
 function toggleTask(id){
-  const k=todayKey();
+  const k=viewDate; // отмечаем в том дне, который сейчас открыт
   if(!state.history[k]) state.history[k]={};
   if(state.history[k][id]) delete state.history[k][id]; else state.history[k][id]=true;
   if(Object.keys(state.history[k]).length===0) delete state.history[k];
   save(); renderToday();
 }
+function setViewDate(k){
+  const today=todayKey();
+  const lo = (dayDiff(state.startDate, today) >= 0) ? state.startDate : today;
+  if(dayDiff(today, k) > 0) k = today; // не листаем в будущее
+  if(dayDiff(k, lo) > 0) k = lo;       // не раньше начала курса
+  viewDate = k; renderToday(); window.scrollTo(0,0);
+}
 const todayEl = document.getElementById('screen-today');
 todayEl.addEventListener('click', e=>{
+  const nav=e.target.closest('[data-nav]');
+  if(nav){
+    const d=nav.dataset.nav;
+    if(d==='prev') setViewDate(addDays(viewDate,-1));
+    else if(d==='next') setViewDate(addDays(viewDate,1));
+    else if(d==='today') setViewDate(todayKey());
+    return;
+  }
   const card=e.target.closest('.task.clickable'); if(card && card.dataset.task) toggleTask(card.dataset.task);
 });
 todayEl.addEventListener('keydown', e=>{
   if(e.key!=='Enter' && e.key!==' ') return;
   const card=e.target.closest('.task.clickable'); if(!card) return;
   e.preventDefault(); if(card.dataset.task) toggleTask(card.dataset.task);
+});
+// «Отмечать в этом дне» из «Истории» → открыть этот день на экране «Сегодня»
+document.getElementById('screen-history').addEventListener('click', e=>{
+  const b=e.target.closest('.hedit'); if(!b) return;
+  viewDate = b.dataset.day; go('today'); toast('Открыт день для отметок');
 });
 
 /* ---- Авто-обновление при смене реального дня (открыли вкладку на следующий день) ---- */
@@ -594,8 +646,12 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) maybeRe
 window.addEventListener('focus', maybeRefreshDay);
 
 /* ---- Старт ---- */
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>go(t.dataset.screen)));
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
+  if(t.dataset.screen==='today') viewDate = todayKey(); // нижняя вкладка «Сегодня» всегда открывает сегодня
+  go(t.dataset.screen);
+}));
 load();
+viewDate = todayKey(); // при запуске всегда открываем сегодня
 go('today');
 </script>
 </body>
