@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#12a594">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOhSURBVHhe7ZsxaBRBFIZT2p27h6CV2qVMZzqt7AQbwcLCwkKwObARK7ERqyO3E1IIOWR3c4EgEcVI4BDFYCAShIgEAiEERSOBnIqSCIGVf7wLzpu73dnN7GVnzA9fczezO++fnTdvYXZg4FCHyqRSwIbKvnfODdhVJ/TuHBS4P8aB8dAxatXJev0IbuYGrOGE3rYbsqiIOAGbdgLveqlePUpjyCxc0Am9L/RmBafl+l4FE0fjURZcdEI23+XixuAEbLnUGDtFY0sUOrkBW6MXNJQW8gSNsacw8xYF36FVDmuDNFZJWDOmP/Y9CdhaYnJE4pA6WoQTsiqNeU9/Z9+4bJ8KbOHH6uw4jZ0L2x3tYCUTo/do7Fxu6D2XGlsItkYae3vPL26FpxtpR3D9kWHayGbKYe2iYAB+oI2sxvcqggG2b38UvEkKBvBXyy4NbeXQAJMNGHr8MLr77k10f2khOj87Jf2vgrEGXHk1E+3s7kb/6vbia6ldEkYacHZmUgoewm+npx5I7eMwzoDBR+PR+s8fNPY9XWhOS33iMMqAE5Nj0dvNDRqzoLS5wCgDxlfe03gFPfu4KvVJwhgDkODihGWRdv0DIwzAuo4Tkh8SI+2nQuENwF7/7fcOjVkQtkTaT5VCG4BHeuX7Fo1XEIog2i8NhTYASS1OWZIepbAGVD8s0ngFLW1t8m2R9ktLIQ24NjdL4xWEnIDcQPtlQbsBZ56GfF1mfUHpVeZ2hP/SVntxaDXg0osn0uDxtkbb9SKpzIVuLryU+u0HrQZ83f5Fx8ulkqlVylxUgrTfftFmANZknJJMSCpz5zY+aUl6FG0GYHBJ6mVCXmWuCtoMAAgwSdSEPMtcFbQaACZWl2kMkjom5F3mqqDdAKBiAgqdvMtcFXIxAKiYECcdZa4KuRkAspqgq8xVIVcDQFoTdJa5KuRuAFA1QXeZq0JfDAAqJuguc1XomwEgzoQ8ylwV+moA6GZC8/N635Iepe8GgBvzTV7bA+z1BxU8kA3wa7doI5uRDQi9y7SRzWDCBQP42f8uDW0FEy4YgMODtJHV+CPDggGQtWeECTgNS2Pn6sdOUASccLROY+fCMvgfDkvGfl+E09S0g03gmyIas6D2U2DliXE83dIR2W5ChrRxKUhbX5zQ2CYTpMpPRe3iqEUvZhKYxFQzT8ULpIA16IVNAAlPac2rCFsH9k8DEmQLE5bqM7m04t8W+F4F66ooYDy5Bm2r/gDRMC8M1+ID7AAAAABJRU5ErkJggg==">
+<title>Трекер лечения</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Трекер">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAl4SURBVHhe7d2/i2VnHcfx/A12lnaWdpZ2dpbpLO1S2lnaWW0TSCEELFYCISgRA4ElKAYDkUWJLIGFQIIikUCIohghMPKVGZ08d2fm3jvnx/ecz+uBVxPCzpnivOfcc58fz33l4YsXQKbnxv8A5BAACCYAEEwAIJgAQDABgGACAMEEAIIJAAQTAAgmABBMACCYAEAwAYBgAgDBBACCCQAEEwAIJgAQTAAgmABAMAGAYAIAwQQAggkABBMACCYAEEwAIJgAQDABgGACAMEEAIIJAAQTAAgmABBMACCYAEAwAYBgAgDBBACCCQAEEwAIJgAQTAAgmABAMAGAYAIAwQQAggkABBMACCYAEEwAIJgAQDABgGACAMEEAIIJAAQTAAgmABBMACCYAEAwAYBgAgDBBACCCQAEEwAIJgAQTAAgmABAMAGAYAIAwQQAggkABBMACCYAEEwAIJgAQDABgGACAMEEAIIJAAQTAAgmABBMACCYAEAwAYBgAgDBBACCCQAEEwAIJgAQTAAgmABAMAGAYAIAwQQAggkABBMACCYA7NI3f/Hw4juPfvY/337z1YP/BwFgJ776yksXL7zz6OLRXz66+PyLLy5uGr/75OOLH/7+txdff+3lg38jkQCwaXXjv/T+Hy4++/fn471+53jtw6fxIRAANqse65/+7dPxvj5pVDjqyWH8t1MIAJtUN+2U40fvvXvwMxIIAJsz9c1/NRIjIABsynd//cZ43046fvD4Nwc/c88EgM2or/Zue8M/xah/v37O+LP3SgDYhK+9+uOLj/7x9/F+nWXUV4Xjz98rAaC9+qrv7Y//PN6ns46UiUMCQHv1Pf/S46cfvH9wHXskALT2/Xd/Nd6bi4x6FzBeyx4JAG3VY/jcL/1uG99645WDa9obAaClb/z8Jxd//dc/x3ty0ZEwQ1AAaKde+tWb+LVHwsQgAaCdWqTTYQgALKxm4nUZAgALev6t18d7cNVR+waM17g3AkAL9dLvnDX9c44K0nideyMArK6m+d53Xf8co65rvNa9EQBWV9t4dRs19Xi8zj0SAFb14Mnj8d5rMb739psH17pHAsBq6ibrOGoCUs1FGK93jwSAVdQ02zWn+d42Uv76FwFgcbUT71Jr+08dNQlpvN49EwAWtcba/mNHRSnhzf91AsCiXn76x/G+azHStgK7IgAsZq21/ceM2mx0vN4EAsAi6ny+ri/9Eub830QAmF2Htf03jV/+6YOD600iAMyqXvq99+kn433XYtT045Tv+28iAMyq/sJ2HLXwqJ5MxutNIwDMppbTdh31TmK83kQCwCzmPsLrPiPt+K/bCACTq+/Tu63tvxop+/0fSwCY1JJHeJ06aqPR9Jd+IwFgUh3X9teoKNUahPF60wkAk1njCK9jRk1ASjnr71QCwCS6ru2vkbS891QCwL2tfYTXbaOeSsbr5f8EgHvpvLa/3keM18uXCQBn63KE17NG4tr+cwgAZ6vv1DuOmoOQuLb/HALAWTod4TWO1LX95xAATlbz6LuOhOO8piQAnKTjEV5XI31t/zkEgKPVS7+OR3jVqD0HTPM9nQBwtK5r+2u3IWv7zyMAHKX2zes4agKStf3nEwDu1Hltf+00PF4vxxOAM9X01/rLc6WOuhr/nz2o79O7TvOtMwbG6+U0AnCkesFUf23qc/Btb8HrZVR9R76Hz6Sd1/bX6UJe+t2fANyh5rrX59/bbvqbRi1E2ep01O5HeFnbPw0BuEU95t93P/sKxxaXo3Ze27/Xj1trEIAbvPDOo0k/+25phlrnI7y2GNPOBOAZ5trcYgsbUnZe2//gyeOD6+V+BGAw9w3QeYOKzkd4Wds/DwG4pl58LXEDdDyMsvPa/pp+vNWXqd0JwDVLznbr9k7gtQ+fjpfYYjjCa14CcKm+Vprz0f9Zo140jtexhs5r+59/6/WD62U6AnBprTffa0egbrCuwxFe8xOAS2tNeqmnjrX+ynVe218fScbrZXoCcPn4v+ZYIwL1Uq3r2n5HeC1HAB6++N+ZZWuPpWe4dT3Cy9r+ZQlAo8/B9Ti+RARqQk3H4Qiv5QnA5bTfLmPur73mmuU4xbC2f3kC0OgJ4GrUarc5IlBPF0t/1Xns6DxDcs8EoOk211Mvee18hJe1/esRgAbfAtw0anORKabAdl/bP8XvyHkE4FLdbB3HFBGorbM6jvo44givdQnApa4bYNSor+zOfURea4bjMcMRXusTgEsd5gLcNs6JQL3b6PrSr+OKyEQCcE3Xgy+uxinTYzuv7XeEVx8CcE33p4Aax+wqVE8KXd9p1PTjU59kmI8ADDovjb0ad31n3vVJZu5JTpxOAJ6h6+YY18dNn6Fro5GuwxFe/QjAM9QjatfFMtfHuKtQ5yO8rO3vSQBuUN+9d/0cfX1cbShS36d3Xdt/zHsL1iEAt9hKBOqva9dpvtb29yYAd+g8h777mHo9A9MTgCPUm2sROG1Y278NAnCkzvvndRyO8NoGAThBTRQSgbvHXfMU6EMATtR5U40OwxFe2yIAZ6gdhETgcFjbvz0CcCYR+PKoj0bW9m+PANxDp81E1x7W9m+TANyTCBxOSWY7BGACnRfgzD2s7d82AZjIkkeLdxk1Tdo0320TgAl13ldw6uEIr30QgInVyre9j/r2w9r+fRCAGWxhQ5H7DEd47YcAzGArG4qcM+qMgfH3ZbsEYCZ7jIAjvPZHAGa0lQ1FjhnW9u+TAMxsDxGol361CGr83dg+AVjA1ncVsrZ/vwRgIVvdVejBk8cHvwv7IQAL2tquQtb2758ALGwruwrVEV7W9u+fAKyg+65CjvDKIQAr6byhSF3beL3skwCsqGMEHOGVRQBW1mlDkVrDMF4f+yYADXSIgCO8MglAE2vuKmRtfy4BaGSNXYUc4ZVNAJpZelcha/uzCUBDS+0q5AgvBKCpuXcVsrafIgBNzbmhSC1PNs2XIgCNVQSm/jjg5uc6AdiAWpI7xaiYuPm5TgA2orbhPndnofqe3/x+nkUANqZ25zn23UC96KtZhv7qcxMB2Kh6P1An8tbkoVE9LZjZxzEEAIIJAAQTAAgmABBMACCYAEAwAYBgAgDBBACCCQAEEwAIJgAQTAAgmABAMAGAYAIAwQQAggkABBMACCYAEEwAIJgAQDABgGACAMEEAIIJAAQTAAgmABBMACCYAEAwAYBgAgDBBACCCQAEEwAIJgAQTAAgmABAMAGAYAIAwQQAggkABBMACCYAEEwAIJgAQDABgGACAMEEAIIJAAQTAAgmABBMACCYAEAwAYBgAgDBBACCCQAEEwAIJgAQTAAgmABAMAGAYAIAwf4D+OE9gz40DbQAAAAASUVORK5CYII=">
+<link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi0KLRgNC10LrQtdGAINC70LXRh9C10L3QuNGPIiwic2hvcnRfbmFtZSI6ItCi0YDQtdC60LXRgCIsInN0YXJ0X3VybCI6Ii4iLCJzY29wZSI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZWFlZWYxIiwidGhlbWVfY29sb3IiOiIjMTJhNTk0IiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBUUFBQUFFQUNBWUFBQUJjY3FobUFBQUFBWE5TUjBJQXJzNGM2UUFBQUFSblFVMUJBQUN4and2OFlRVUFBQUFKY0VoWmN3QUFEc01BQUE3REFjZHZxR1FBQUFsNFNVUkJWSGhlN2QyL2kyVm5IY2Z4L0ExMmxuYVdkcFoyZHBicExPMVMybG5hV1cwVFNDRUVMRllDSVNnUkE0RWxLQVlEa1VXSkxJR0ZRSUlpa1VDSW9oZ2hNUEtWR1owOGQyZm0zanZueC9lY3ordUJWeFBDenBuaXZPZmNjNThmejMzbDRZc1hRS2JueHY4QTVCQUFDQ1lBRUV3QUlKZ0FRREFCZ0dBQ0FNRUVBSUlKQUFRVEFBZ21BQkJNQUNDWUFFQXdBWUJnQWdEQkJBQ0NDUUFFRXdBSUpnQVFUQUFnbUFCQU1BR0FZQUlBd1FRQWdna0FCQk1BQ0NZQUVFd0FJSmdBUURBQmdHQUNBTUVFQUlJSkFBUVRBQWdtQUJCTUFDQ1lBRUF3QVlCZ0FnREJCQUNDQ1FBRUV3QUlKZ0FRVEFBZ21BQkFNQUdBWUFJQXdRUUFnZ2tBQkJNQUNDWUFFRXdBSUpnQVFEQUJnR0FDQU1FRUFJSUpBQVFUQUFnbUFCQk1BQ0NZQUVBd0FZQmdBZ0RCQkFDQ0NRQUVFd0FJSmdBUVRBQWdtQUJBTUFHQVlBSUF3UVFBZ2drQUJCTUFDQ1lBN05JM2YvSHc0anVQZnZZLzMzN3oxWVAvQndGZ0o3NzZ5a3NYTDd6ejZPTFJYejY2K1B5TEx5NXVHci83NU9PTEgvNyt0eGRmZiszbGczOGprUUN3YVhYanYvVCtIeTQrKy9mbjQ3MSs1M2p0dzZmeElSQUFOcXNlNjUvKzdkUHh2ajVwVkRqcXlXSDh0MU1JQUp0VU4rMlU0MGZ2dlh2d014SUlBSnN6OWMxL05SSWpJQUJzeW5kLy9jWjQzMDQ2ZnZENE53Yy9jODhFZ00yb3IvWnVlOE0veGFoL3YzN08rTFAzU2dEWWhLKzkrdU9Mai83eDkvRituV1hVVjRYano5OHJBYUM5K3FydjdZLy9QTjZuczQ2VWlVTUNRSHYxUGYvUzQ2Y2Z2SDl3SFhza0FMVDIvWGQvTmQ2Ymk0eDZGekJleXg0SkFHM1ZZL2pjTC8xdUc5OTY0NVdEYTlvYkFhQ2xiL3o4SnhkLy9kYy94M3R5MFpFd1ExQUFhS2RlK3RXYitMVkh3c1FnQWFDZFdxVFRZUWdBTEt4bTRuVVpBZ0FMZXY2dDE4ZDdjTlZSK3dhTTE3ZzNBa0FMOWRMdm5EWDljNDRLMG5pZGV5TUFySzZtK2Q1M1hmOGNvNjVydk5hOUVRQldWOXQ0ZFJzMTlYaTh6ajBTQUZiMTRNbmo4ZDVyTWI3Mzlwc0gxN3BIQXNCcTZpYnJPR29DVXMxRkdLOTNqd1NBVmRRMDJ6V24rZDQyVXY3NkZ3RmdjYlVUNzFKciswOGROUWxwdk40OUV3QVd0Y2JhL21OSFJTbmh6ZjkxQXNDaVhuNzZ4L0crYXpIU3RnSzdJZ0FzWnEyMS9jZU0ybXgwdk40RUFzQWk2bnkrcmkvOUV1YjgzMFFBbUYySHRmMDNqVi8rNllPRDYwMGlBTXlxWHZxOTkra240MzNYWXRUMDQ1VHYrMjhpQU15cS9zSjJITFh3cUo1TXh1dE5Jd0RNcHBiVGRoMzFUbUs4M2tRQ3dDem1Qc0xyUGlQdCtLL2JDQUNUcSsvVHU2M3R2eG9wKy8wZlN3Q1kxSkpIZUowNmFxUFI5SmQrSXdGZ1VoM1g5dGVvS05VYWhQRjYwd2tBazFuakNLOWpSazFBU2pucjcxUUN3Q1M2cnUydmtiUzg5MVFDd0wydGZZVFhiYU9lU3NicjVmOEVnSHZwdkxhLzNrZU0xOHVYQ1FCbjYzS0UxN05HNHRyK2N3Z0FaNnZ2MUR1T21vT1F1TGIvSEFMQVdUb2Q0VFdPMUxYOTV4QUFUbGJ6Nkx1T2hPTzhwaVFBbktUakVWNVhJMzF0L3prRWdLUFZTNytPUjNqVnFEMEhUUE05blFCd3RLNXIrMnUzSVd2N3p5TUFIS1gyemVzNGFnS1N0ZjNuRXdEdTFIbHRmKzAwUEY0dnh4T0FNOVgwMS9yTGM2V091aHIvbnoybzc5TzdUdk90TXdiRzYrVTBBbkNrZXNGVWYyM3FjL0J0YjhIclpWUjlSNzZIejZTZDEvYlg2VUplK3QyZkFOeWg1cnJYNTkvYmJ2cWJSaTFFMmVwMDFPNUhlRm5iUHcwQnVFVTk1dDkzUC9zS3h4YVhvM1plMjcvWGoxdHJFSUFidlBET28way8rMjVwaGxybkk3eTJHTlBPQk9BWjV0cmNZZ3NiVW5aZTIvL2d5ZU9ENitWK0JHQXc5dzNRZVlPS3prZDRXZHMvRHdHNHBsNThMWEVEZER5TXN2UGEvcHArdk5XWHFkMEp3RFZMem5icjlrN2d0UStmanBmWVlqakNhMTRDY0ttK1ZwcnowZjlabzE0MGp0ZXhoczVyKzU5LzYvV0Q2MlU2QW5CcHJUZmZhMGVnYnJDdXd4RmU4eE9BUzJ0TmVxbW5qclgreW5WZTIxOGZTY2JyWlhvQ2NQbjR2K1pZSXdMMVVxM3IybjVIZUMxSEFCNisrTitaWld1UHBXZTRkVDNDeTlyK1pRbEFvOC9COVRpK1JBUnFRazNINFFpdjVRbkE1YlRmTG1QdXI3M21tdVU0eGJDMmYza0MwT2dKNEdyVWFyYzVJbEJQRjB0LzFYbnM2RHhEY3M4RW9PazIxMU12ZWUxOGhKZTEvZXNSZ0FiZkF0dzBhbk9SS2FiQWRsL2JQOFh2eUhrRTRGTGRiQjNIRkJHb3JiTTZqdm80NGdpdmRRbkFwYTRiWU5Tb3Irek9mVVJlYTRiak1jTVJYdXNUZ0VzZDVnTGNOczZKUUwzYjZQclNyK09LeUVRQ2NFM1hneSt1eGluVFl6dXY3WGVFVng4Q2NFMzNwNEFheCt3cVZFOEtYZDlwMVBUalU1OWttSThBRERvdmpiMGFkMzFuM3ZWSlp1NUpUcHhPQUo2aDYrWVkxOGRObjZGcm81R3V3eEZlL1FqQU05UWphdGZGTXRmSHVLdFE1eU84ck8zdlNRQnVVTis5ZC8wY2ZYMWNiU2hTMzZkM1hkdC96SHNMMWlFQXQ5aEtCT3F2YTlkcHZ0YjI5eVlBZCtnOGg3NzdtSG85QTlNVGdDUFVtMnNST0cxWTI3OE5BbkNrenZ2bmRSeU84Tm9HQVRoQlRSUVNnYnZIWGZNVTZFTUFUdFI1VTQwT3d4RmUyeUlBWjZnZGhFVGdjRmpidnowQ2NDWVIrUEtvajBiVzltK1BBTnhEcDgxRTF4N1c5bStUQU55VENCeE9TV1k3QkdBQ25SZmd6RDJzN2Q4MkFaaklra2VMZHhrMVRkbzAzMjBUZ0FsMTNsZHc2dUVJcjMwUWdJblZ5cmU5ai9yMnc5citmUkNBR1d4aFE1SDdERWQ0N1ljQXpHQXJHNHFjTStxTWdmSDNaYnNFWUNaN2pJQWp2UFpIQUdhMGxRMUZqaG5XOXUrVEFNeHNEeEdvbDM2MUNHcjgzZGcrQVZqQTFuY1ZzclovdndSZ0lWdmRWZWpCazhjSHZ3djdJUUFMMnRxdVF0YjI3NThBTEd3cnV3clZFVjdXOXUrZkFLeWcrNjVDanZES0lRQXI2YnloU0YzYmVMM3Nrd0NzcUdNRUhPR1ZSUUJXMW1sRGtWckRNRjRmK3lZQURYU0lnQ084TWdsQUUydnVLbVJ0Znk0QmFHU05YWVVjNFpWTkFKcFplbGNoYS91ekNVQkRTKzBxNUFndkJLQ3B1WGNWc3JhZklnQk56Ym1oU0MxUE5zMlhJZ0NOVlFTbS9qamc1dWM2QWRpQVdwSTd4YWlZdVBtNVRnQTJvcmJoUG5kbm9mcWUzL3grbmtVQU5xWjI1em4yM1VDOTZLdFpodjdxY3hNQjJLaDZQMUFuOHRia29WRTlMWmpaeHpFRUFJSUpBQVFUQUFnbUFCQk1BQ0NZQUVBd0FZQmdBZ0RCQkFDQ0NRQUVFd0FJSmdBUVRBQWdtQUJBTUFHQVlBSUF3UVFBZ2drQUJCTUFDQ1lBRUV3QUlKZ0FRREFCZ0dBQ0FNRUVBSUlKQUFRVEFBZ21BQkJNQUNDWUFFQXdBWUJnQWdEQkJBQ0NDUUFFRXdBSUpnQVFUQUFnbUFCQU1BR0FZQUlBd1FRQWdna0FCQk1BQ0NZQUVFd0FJSmdBUURBQmdHQUNBTUVFQUlJSkFBUVRBQWdtQUJCTUFDQ1lBRUF3QVlCZ0FnREJCQUNDQ1FBRUV3QUlKZ0FRVEFBZ21BQkFNQUdBWUFJQXdmNEQrT0U5Z3o0MERiUUFBQUFBU1VWT1JLNUNZSUk9Iiwic2l6ZXMiOiIyNTZ4MjU2IiwidHlwZSI6ImltYWdlL3BuZyIsInB1cnBvc2UiOiJhbnkgbWFza2FibGUifV19">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#eaeef1;--card:#ffffff;--ink:#1d2a31;--muted:#6a7883;--line:#e3e9ee;
+  --primary:#12a594;--primary-ink:#0c7d70;--ok:#12a594;
+  --chip-bg:rgba(18,165,148,.12);
+  --alert-bg:#fff4e5;--alert-ink:#a9640c;--alert-line:#f4d3a3;
+  --danger:#c0392b;--danger-line:#e2b4b4;
+  --shadow:0 1px 2px rgba(20,40,50,.05),0 6px 16px rgba(20,40,50,.06);
+  --radius:16px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1417;--card:#19222a;--ink:#e8eef2;--muted:#93a3ad;--line:#28343c;
+  --primary:#1ab39f;--primary-ink:#7fe0d3;--ok:#1ab39f;
+  --chip-bg:rgba(26,179,159,.16);
+  --alert-bg:#2a2114;--alert-ink:#f0c07a;--alert-line:#4a3a20;
+  --danger:#ff8a7a;--danger-line:#5a3030;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 16px rgba(0,0,0,.25);
+}}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;padding-bottom:78px;line-height:1.35}
+.appbar{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);
+  padding:13px 18px;font-weight:800;font-size:16px;letter-spacing:-.2px}
+main{max-width:640px;margin:0 auto;padding:16px 14px 24px}
+.screen.hidden{display:none}
+
+/* Today header */
+.today-head .today-label{font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+.today-head .today-date{font-size:17px;font-weight:600;margin-top:2px}
+.today-head .daynum{font-size:26px;font-weight:800;letter-spacing:-.6px;margin-top:5px}
+
+.banner{margin:14px 0;background:var(--alert-bg);color:var(--alert-ink);border:1px solid var(--alert-line);
+  border-radius:12px;padding:11px 14px;font-size:14px;font-weight:600}
+.notice{background:var(--alert-bg);color:var(--alert-ink);border:1px solid var(--alert-line);
+  border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px;font-weight:600}
+
+.summary{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;
+  box-shadow:var(--shadow);margin-bottom:20px}
+.summary-row{display:flex;justify-content:space-between;font-weight:700;margin-bottom:11px;font-size:15px}
+.bar{height:9px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;background:var(--primary);border-radius:99px;transition:width .35s ease}
+.bar-fill.ok{background:var(--ok)}
+
+/* Blocks */
+.block{margin-bottom:20px}
+.block-head{display:flex;align-items:baseline;gap:8px;padding:0 4px 10px}
+.block-icon{font-size:18px}
+.block-title{font-weight:800;font-size:17px;letter-spacing:-.2px}
+.block-sub{color:var(--muted);font-size:13px}
+.block-note{font-size:12.5px;color:var(--muted);background:var(--card);border:1px dashed var(--line);
+  border-radius:10px;padding:9px 12px;margin:0 0 10px;line-height:1.5}
+
+/* Task cards */
+.task{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:13px 14px;margin-bottom:9px;box-shadow:var(--shadow)}
+.task.clickable{cursor:pointer;-webkit-user-select:none;user-select:none;transition:transform .06s ease,border-color .15s}
+.task.clickable:active{transform:scale(.99)}
+.task.on{border-color:var(--primary)}
+.task .check{width:26px;height:26px;flex:none;border:2px solid var(--line);border-radius:8px;
+  display:grid;place-items:center;transition:.15s}
+.task .check.on{background:var(--primary);border-color:var(--primary)}
+.task .check.on::after,.task .check.done::after{content:"";width:6px;height:11px;border:solid #fff;
+  border-width:0 3px 3px 0;transform:rotate(45deg);margin-top:-2px}
+.task .check.done{background:var(--muted);border-color:var(--muted)}
+.task .check.rest{border-style:dashed;color:var(--muted);font-weight:800;font-size:15px;line-height:1}
+.task .body{flex:1;min-width:0}
+.task .nameline{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;row-gap:5px}
+.task .name{font-weight:600;font-size:15px}
+.task .detail{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+.ttag{flex:none;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;line-height:1.6}
+.ttag.during{color:var(--primary-ink);background:var(--chip-bg)}
+.ttag.after{color:#b9770f;background:rgba(214,150,40,.18)}
+.ttag.before{color:#3b7bd6;background:rgba(70,130,240,.18)}
+.ttag.free{color:var(--muted);background:var(--line)}
+.task .chips{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.task .chip{font-size:12px;font-weight:700;color:var(--primary-ink);background:var(--chip-bg);
+  padding:4px 9px;border-radius:99px;white-space:nowrap}
+.task .chip.muted{color:var(--muted);background:var(--line)}
+.task .chip-sub{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;padding-right:4px}
+.task.done{opacity:.58}
+.task.rest{opacity:.72;border-style:dashed}
+
+/* Progress + history headers */
+.p-head{margin-bottom:16px}
+.p-head .date{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.p-head .daynum{color:var(--muted);font-size:14px;margin-top:4px}
+
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;
+  margin-bottom:10px;box-shadow:var(--shadow)}
+.prow{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:15px}
+.pname{font-weight:600}
+.pval{font-weight:700;color:var(--muted);white-space:nowrap}
+.pval.ok{color:var(--ok)}
+.pval.muted{font-weight:600}
+.pcard.routine{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.psub{color:var(--muted);font-size:12.5px;margin-top:9px;line-height:1.4}
+.p-sub{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  margin:22px 4px 10px}
+.pcard.appt{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+.pcard.appt .adate{font-weight:600;font-size:15px}
+.pcard.appt .aleft{font-weight:700;color:var(--primary-ink);white-space:nowrap;font-size:14px}
+.pcard.appt.past{opacity:.55}
+.pcard.appt.past .aleft{color:var(--muted)}
+
+/* History */
+.hday{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;
+  box-shadow:var(--shadow);overflow:hidden}
+.hday summary{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+  cursor:pointer;list-style:none;font-size:14px;gap:10px}
+.hday summary::-webkit-details-marker{display:none}
+.hdate{font-weight:600}
+.hcount{font-weight:700;color:var(--muted);white-space:nowrap}
+.hcount.ok{color:var(--ok)}
+.hbody{padding:0 14px 12px;color:var(--muted);font-size:13px;line-height:1.7}
+
+/* Settings */
+.setcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;
+  margin-bottom:12px;box-shadow:var(--shadow)}
+.setlabel{font-weight:700;font-size:15px;display:block;margin-bottom:10px}
+input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);font-size:15px;font-family:inherit}
+.apptrow{display:flex;gap:7px;align-items:center;margin-bottom:8px}
+.apptrow input[type=date]{width:auto;flex:1 1 42%;min-width:0;padding:10px;font-size:14px}
+.apptrow .atext{flex:1 1 42%;min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);font-size:14px;font-family:inherit}
+.apptrow .del{flex:none;width:38px;height:40px;border:1px solid var(--danger-line);color:var(--danger);
+  background:transparent;border-radius:10px;font-size:20px;line-height:1;cursor:pointer}
+.apptrow .del:active{transform:scale(.95)}
+.hint{color:var(--muted);font-size:13px;margin-top:10px;line-height:1.5}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:130px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.99)}
+.btn-danger{background:transparent;border-color:var(--danger-line);color:var(--danger)}
+.about{text-align:center;color:var(--muted);font-size:12px;margin-top:18px;line-height:1.5}
+
+/* Bottom nav */
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+.tab{flex:1;background:none;border:none;padding:9px 0 10px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.tab .ti{font-size:19px;line-height:1;filter:grayscale(.4);opacity:.8}
+.tab.active{color:var(--primary-ink)}
+.tab.active .ti{filter:none;opacity:1}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(18px);
+  background:#222c33;color:#fff;padding:11px 18px;border-radius:99px;font-size:14px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.25s;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.28);max-width:90%}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header class="appbar">🧴 Трекер лечения</header>
+
+<main>
+  <section id="screen-today" class="screen"></section>
+  <section id="screen-progress" class="screen hidden"></section>
+  <section id="screen-history" class="screen hidden"></section>
+  <section id="screen-settings" class="screen hidden"></section>
+</main>
+
+<nav class="tabs">
+  <button class="tab active" data-screen="today"><span class="ti">🗓️</span><span>Сегодня</span></button>
+  <button class="tab" data-screen="progress"><span class="ti">📊</span><span>Прогресс</span></button>
+  <button class="tab" data-screen="history"><span class="ti">📜</span><span>История</span></button>
+  <button class="tab" data-screen="settings"><span class="ti">⚙️</span><span>Настройки</span></button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<script>
+'use strict';
+const KEY = 'acneTracker.v1';
+const SCHEMA = 3; // версия данных (для миграций)
+const DEFAULT_START = '2026-08-31'; // старт курса — 31 августа 2026
+// Приёмы у врача по умолчанию (редактируются в «Настройках»)
+const DEFAULT_APPTS = [
+  { date:'2026-10-05', label:'5–6 октября 2026' },
+];
+
+/* ---- Данные курса ---- */
+const BLOCKS = [
+  { id:'morning',   title:'Утро',    subtitle:'после пробуждения', icon:'🌅' },
+  { id:'breakfast', title:'Завтрак', subtitle:'у каждого свой момент', icon:'🍳',
+    note:'Не глотать всё разом — у каждой таблетки своя пометка: во время / после еды / отдельно.' },
+  { id:'day',       title:'День',    subtitle:'16:00–18:00',       icon:'☀️',
+    note:'Базирон: первые 14 дней — через день (в «пустой» день карточка станет «пропуск»), с 15-го дня — каждый день.' },
+  { id:'dinner',    title:'Ужин',    subtitle:'во время еды',      icon:'🍽️' },
+  { id:'evening',   title:'Вечер',   subtitle:'перед сном',        icon:'🌙' },
+];
+
+// Пометка «когда относительно еды» — цветной тег на карточке
+const TIMING = {
+  before: { t:'до еды',             c:'before' },
+  during: { t:'во время еды',       c:'during' },
+  after:  { t:'после еды',          c:'after'  },
+  free:   { t:'без привязки к еде',  c:'free'   },
+};
+
+// duration: длительность в днях; null = без ограничения (рутина)
+const TASKS = [
+  { id:'wash_am',    block:'morning',   name:'Умывание',               detail:'Bioderma Sensibio · гель, умыться тёплой водой',            duration:null },
+  { id:'moist_am',   block:'morning',   name:'Увлажняющий крем',       detail:'Тонкий слой на всё лицо · Avène Комедомед / Dr. Althea 345', duration:null },
+  { id:'spf_am',     block:'morning',   name:'SPF 50+',                detail:'Последний шаг, после крема · Avène / Bioderma / Beauty of Joseon', duration:null },
+
+  { id:'vitd',       block:'breakfast', name:'Витамин Д 5000 МЕ',      detail:'1 таблетка · обязательно до 12:00',              timing:'during', duration:90 },
+  { id:'ursosan_am', block:'breakfast', name:'Урсосан 250 мг',         detail:'1 таблетка · 1-й приём из 2 за день',            timing:'during', duration:14 },
+  { id:'unidox',     block:'breakfast', name:'Юнидокс Солютаб 100 мг', detail:'1 таблетка · не натощак',                       timing:'after',  duration:28 },
+  { id:'zinc',       block:'breakfast', name:'Цинк пиколинат 50 мг',   detail:'1 таблетка · лучше не одновременно с Юнидоксом', timing:'free',   duration:60 },
+
+  { id:'baziron',    block:'day',       name:'Базирон АС 2.5%',        detail:'Тонкий слой только на высыпания · ориентир 16:00–18:00',    duration:56, special:'baziron' },
+
+  { id:'ursosan_pm', block:'dinner',    name:'Урсосан 250 мг',         detail:'1 таблетка · 2-й приём из 2 за день',            timing:'during', duration:14 },
+
+  { id:'wash_pm',    block:'evening',   name:'Умывание',               detail:'Bioderma Sensibio · гель, умыться тёплой водой',            duration:null },
+  { id:'klenzit',    block:'evening',   name:'Клензит С',              detail:'Тонкий слой на всё лицо · на ночь, перед сном',             duration:56 },
+  { id:'moist_pm',   block:'evening',   name:'Увлажняющий крем',       detail:'Тонкий слой на всё лицо · Avène Комедомед / Dr. Althea 345', duration:null },
+];
+
+const COURSE_MEDS = [
+  { name:'Юнидокс Солютаб 100 мг', duration:28 },
+  { name:'Урсосан 250 мг',         duration:14 },
+  { name:'Витамин Д 5000 МЕ',      duration:90 },
+  { name:'Цинк пиколинат 50 мг',   duration:60 },
+  { name:'Базирон АС 2.5%',        duration:56 },
+  { name:'Клензит С',              duration:56 },
+];
+const ROUTINE = ['Умывание — Bioderma Sensibio', 'Увлажняющий крем', 'SPF (утром)'];
+
+/* ---- Работа с датами ---- */
+function pad(n){ return String(n).padStart(2,'0'); }
+function keyOf(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function parseKey(k){ const p=k.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function todayKey(){ return keyOf(new Date()); }
+function dayDiff(aKey,bKey){ return Math.round((parseKey(bKey)-parseKey(aKey))/86400000); }
+function addDays(k,n){ const d=parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); }
+function fmt(k,opts){ return parseKey(k).toLocaleDateString('ru-RU', opts||{day:'numeric',month:'long',year:'numeric'}); }
+function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+function plural(n,one,few,many){ const a=Math.abs(n)%100,b=a%10; if(a>10&&a<20)return many; if(b>1&&b<5)return few; if(b===1)return one; return many; }
+function daysWord(n){ return plural(n,'день','дня','дней'); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---- Приёмы у врача ---- */
+function sortedAppts(){ return (state.appointments||[]).filter(a=>a&&a.date).slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); }
+function apptText(a){ return (a.label && a.label.trim()) ? esc(a.label.trim()) : cap(fmt(a.date)); }
+function apptCountdown(a){ const d=dayDiff(todayKey(),a.date); if(d>0) return 'через '+d+' '+daysWord(d); if(d===0) return 'сегодня'; return (-d)+' '+daysWord(-d)+' назад'; }
+function nextAppt(){ const t=todayKey(); const up=sortedAppts().filter(a=>dayDiff(t,a.date)>=0); return up.length?up[0]:null; }
+
+/* ---- Состояние ---- */
+let state = { startDate: DEFAULT_START, appointments: DEFAULT_APPTS.map(a=>({...a})), history:{} };
+let lastRenderedDay = ''; // для авто-обновления при смене реального дня
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const p = JSON.parse(raw);
+      if(p && typeof p==='object'){
+        if(typeof p.startDate==='string') state.startDate = p.startDate;
+        if(Array.isArray(p.appointments)) state.appointments = p.appointments;
+        state.history = (p.history && typeof p.history==='object') ? p.history : {};
+        if(p.v !== SCHEMA) migrate();
+      }
+    }
+  }catch(e){ console.warn('load failed', e); }
+}
+function migrate(){
+  // v<2: убрать старый авто-приём 28.09.2026 (пустая подпись)
+  state.appointments = (state.appointments||[]).filter(a => !(a && a.date==='2026-09-28' && !(a.label && a.label.trim())));
+  // v<3: исправить авто-приём 5–6 ноября → 5–6 октября (была ошибка в дате)
+  state.appointments = (state.appointments||[]).map(a =>
+    (a && a.date==='2026-11-05' && a.label==='5–6 ноября 2026') ? { date:'2026-10-05', label:'5–6 октября 2026' } : a);
+  save(); // пересохраняем уже с актуальной версией
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(Object.assign({v:SCHEMA}, state))); }
+  catch(e){ console.warn('save failed', e); toast('⚠️ Не удалось сохранить'); }
+}
+function isChecked(id, k){ return !!(state.history[k] && state.history[k][id]); }
+
+/* ---- Статус пункта на конкретный день ---- */
+function statusOf(task, dateKey){
+  const cd = dayDiff(state.startDate, dateKey) + 1; // 1-й день курса = дата начала
+  if(cd < 1) return { s:'notstarted', cd };
+  if(task.duration !== null && cd > task.duration) return { s:'completed', cd };
+  if(task.special === 'baziron' && cd <= 14 && cd % 2 === 0) return { s:'rest', cd }; // первые 14 дней — через день
+  return { s:'active', cd };
+}
+/* ---- Карточка пункта ---- */
+function timingTag(task){
+  const m = task.timing && TIMING[task.timing];
+  return m ? '<span class="ttag '+m.c+'">'+m.t+'</span>' : '';
+}
+function cardHTML(task, dateKey){
+  const st = statusOf(task, dateKey);
+  if(st.s==='active'){
+    const on = isChecked(task.id, dateKey);
+    let detail = task.detail;
+    if(task.special==='baziron') detail += (st.cd<=14 ? ' · сегодня наносим (схема через день)' : ' · сейчас каждый день');
+    let chips;
+    if(task.duration===null){
+      chips = '<span class="chip">ежедневно</span>';
+    } else {
+      const rem = task.duration - st.cd + 1; // включая сегодня
+      chips = '<span class="chip">день '+st.cd+'/'+task.duration+'</span>'
+            + '<span class="chip-sub">ещё '+rem+' '+daysWord(rem)+'</span>';
+    }
+    return '<div class="task active clickable'+(on?' on':'')+'" data-task="'+task.id+'" role="button" tabindex="0" aria-pressed="'+on+'">'
+      + '<span class="check'+(on?' on':'')+'"></span>'
+      + '<span class="body"><span class="nameline"><span class="name">'+task.name+'</span>'+timingTag(task)+'</span>'
+      + '<span class="detail">'+detail+'</span></span>'
+      + '<span class="chips">'+chips+'</span></div>';
+  }
+  if(st.s==='rest'){
+    return '<div class="task rest"><span class="check rest">–</span>'
+      + '<span class="body"><span class="name">'+task.name+'</span><span class="detail">Сегодня пропуск · схема «через день» (первые 14 дней курса)</span></span>'
+      + '<span class="chips"><span class="chip muted">пропуск</span></span></div>';
+  }
+  if(st.s==='completed'){
+    return '<div class="task done"><span class="check done"></span>'
+      + '<span class="body"><span class="name">'+task.name+'</span><span class="detail">Курс завершён ✅</span></span></div>';
+  }
+  // notstarted
+  return '<div class="task done"><span class="check"></span>'
+    + '<span class="body"><span class="name">'+task.name+'</span><span class="detail">начнётся '+fmt(state.startDate,{day:'numeric',month:'long'})+'</span></span></div>';
+}
+
+/* ---- Экран «Сегодня» ---- */
+function renderToday(){
+  const k = todayKey(), start = state.startDate;
+  const cd = dayDiff(start, k) + 1;
+
+  let required=0, done=0;
+  for(const t of TASKS){ const st=statusOf(t,k); if(st.s==='active'){ required++; if(isChecked(t.id,k)) done++; } }
+  const pct = required ? Math.round(done/required*100) : 0;
+  const allDone = required>0 && done===required;
+
+  // Баннер ближайшего приёма у врача
+  const na = nextAppt();
+  let banner;
+  if(na){
+    const d = dayDiff(k, na.date);
+    banner = (d===0) ? '📅 Сегодня приём у врача — '+apptText(na)
+                     : '📅 Ближайший приём у врача — '+apptText(na)+' · через '+d+' '+daysWord(d);
+  } else {
+    banner = '📅 Приёмы у врача не запланированы — добавьте в «Настройках»';
+  }
+
+  const dateStr = cap(fmt(k,{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+  let dayLabel;
+  if(cd<1){ const u=dayDiff(k,start); dayLabel = (u===1 ? 'Старт завтра' : 'Старт через '+u+' '+daysWord(u)); }
+  else dayLabel = 'День '+cd+' курса';
+
+  let html = '';
+  html += '<div class="today-head"><div class="today-label">Сегодня</div><div class="today-date">'+dateStr+'</div><div class="daynum">'+dayLabel+'</div></div>';
+  if(cd<1) html += '<div class="notice">Курс начнётся '+fmt(start)+'. С этого дня пункты станут активными. Дату можно изменить в «Настройках».</div>';
+  html += '<div class="banner">'+banner+'</div>';
+  html += '<div class="summary"><div class="summary-row"><span>'
+        + (allDone?'🎉 Всё на сегодня выполнено':'Выполнено сегодня')
+        + '</span><span>'+done+' из '+required+'</span></div>'
+        + '<div class="bar"><div class="bar-fill'+(allDone?' ok':'')+'" style="width:'+pct+'%"></div></div></div>';
+
+  for(const b of BLOCKS){
+    html += '<section class="block"><div class="block-head"><span class="block-icon">'+b.icon+'</span>'
+          + '<span class="block-title">'+b.title+'</span><span class="block-sub">'+b.subtitle+'</span></div>';
+    if(b.note) html += '<div class="block-note">'+b.note+'</div>';
+    for(const t of TASKS){ if(t.block===b.id) html += cardHTML(t, k); }
+    html += '</section>';
+  }
+  document.getElementById('screen-today').innerHTML = html;
+}
+
+/* ---- Экран «Прогресс» ---- */
+function renderProgress(){
+  const k = todayKey(), start = state.startDate;
+  const cd = dayDiff(start, k) + 1;
+  const sub = cd<1 ? 'курс ещё не начался' : ('сегодня — день '+cd);
+
+  let html = '<div class="p-head"><div class="date">Прогресс курса</div>'
+           + '<div class="daynum">Начало '+fmt(start)+' · '+sub+'</div></div>';
+  for(const m of COURSE_MEDS){
+    const notStarted = cd<1;
+    const finished = cd>m.duration;
+    const shown = Math.max(0, Math.min(cd, m.duration));
+    const pct = finished?100:(notStarted?0:Math.round(shown/m.duration*100));
+    let right, psub;
+    if(notStarted){
+      right = 'старт '+fmt(start,{day:'numeric',month:'short'});
+      psub  = 'всего '+m.duration+' '+daysWord(m.duration);
+    } else if(finished){
+      right = 'Завершён ✅';
+      psub  = 'курс из '+m.duration+' '+daysWord(m.duration)+' пройден';
+    } else {
+      const rem = m.duration - cd + 1;
+      right = 'осталось '+rem+' '+daysWord(rem);
+      psub  = 'день '+cd+' из '+m.duration+' · последний '+fmt(addDays(start,m.duration-1),{day:'numeric',month:'long'});
+    }
+    html += '<div class="pcard"><div class="prow"><span class="pname">'+m.name+'</span>'
+          + '<span class="pval'+(finished?' ok':'')+'">'+right+'</span></div>'
+          + '<div class="bar"><div class="bar-fill'+(finished?' ok':'')+'" style="width:'+pct+'%"></div></div>'
+          + '<div class="psub">'+psub+'</div></div>';
+  }
+  html += '<div class="p-sub">Приёмы у врача</div>';
+  const appts = sortedAppts();
+  if(appts.length){
+    for(const a of appts){
+      const past = dayDiff(todayKey(), a.date) < 0;
+      html += '<div class="pcard appt'+(past?' past':'')+'"><span class="adate">'+apptText(a)+'</span>'
+            + '<span class="aleft">'+apptCountdown(a)+'</span></div>';
+    }
+  } else {
+    html += '<div class="pcard"><span class="pval muted">пока не добавлены — см. «Настройки»</span></div>';
+  }
+  html += '<div class="p-sub">Домашний уход · без ограничения по дням</div>';
+  for(const r of ROUTINE){
+    html += '<div class="pcard routine"><span class="pname">'+r+'</span><span class="pval muted">ежедневно</span></div>';
+  }
+  document.getElementById('screen-progress').innerHTML = html;
+}
+
+/* ---- Экран «История» ---- */
+function renderHistory(){
+  const k = todayKey(), start = state.startDate;
+  let html = '<div class="p-head"><div class="date">История</div><div class="daynum">Журнал отметок по дням</div></div>';
+  if(dayDiff(start,k) < 0){
+    html += '<div class="notice">Курс ещё не начался.</div>';
+    document.getElementById('screen-history').innerHTML = html;
+    return;
+  }
+  const rows = [];
+  for(let dk=k; dayDiff(start,dk)>=0; dk=addDays(dk,-1)){
+    let req=0, done=0; const names=[];
+    for(const t of TASKS){ const st=statusOf(t,dk); if(st.s==='active'){ req++; if(isChecked(t.id,dk)){ done++; names.push(t.name); } } }
+    const cd = dayDiff(start,dk)+1;
+    const okCls = (req>0 && done===req) ? ' ok' : '';
+    rows.push('<details class="hday"'+(dk===k?' open':'')+'><summary>'
+      + '<span class="hdate">'+cap(fmt(dk,{weekday:'short',day:'numeric',month:'long'}))+' · день '+cd+'</span>'
+      + '<span class="hcount'+okCls+'">'+done+' / '+req+'</span></summary>'
+      + '<div class="hbody">'+(names.length?names.map(n=>'✓ '+n).join('<br>'):'ничего не отмечено')+'</div></details>');
+    if(rows.length>=200) break;
+  }
+  html += rows.join('');
+  document.getElementById('screen-history').innerHTML = html;
+}
+
+/* ---- Экран «Настройки» ---- */
+function apptRowsHTML(){
+  if(!state.appointments.length) return '<div class="hint" style="margin:0 0 8px">Пока нет приёмов.</div>';
+  return state.appointments.map((a,i)=>
+    '<div class="apptrow" data-i="'+i+'">'
+    + '<input type="date" data-field="date" value="'+esc(a.date||'')+'">'
+    + '<input type="text" class="atext" data-field="label" placeholder="подпись (необяз.)" value="'+esc(a.label||'')+'">'
+    + '<button class="del" data-del="'+i+'" title="Удалить приём">×</button></div>'
+  ).join('');
+}
+function renderSettings(){
+  const cd = dayDiff(state.startDate, todayKey())+1;
+  const el = document.getElementById('screen-settings');
+  el.innerHTML =
+    '<div class="p-head"><div class="date">Настройки</div></div>'
+    + '<div class="setcard"><label class="setlabel" for="startInput">Дата начала курса</label>'
+    + '<input type="date" id="startInput" value="'+state.startDate+'">'
+    + '<div class="hint">Сегодня — '+(cd<1?'курс ещё не начался (старт '+fmt(state.startDate,{day:'numeric',month:'long'})+')':('день '+cd+' курса'))+'.</div></div>'
+    + '<div class="setcard"><div class="setlabel">Приёмы у врача</div>'
+    + '<div id="apptList">'+apptRowsHTML()+'</div>'
+    + '<button class="btn" id="apptAdd" style="margin-top:2px">+ Добавить приём</button>'
+    + '<div class="hint">Дата и, при желании, подпись (например, «5–6 ноября»). Ближайший приём показывается на главном экране с обратным отсчётом.</div></div>'
+    + '<div class="setcard"><div class="setlabel">Резервная копия</div>'
+    + '<div class="btnrow"><button class="btn" id="exportBtn">⬇️ Экспорт (JSON)</button>'
+    + '<button class="btn" id="importBtn">⬆️ Импорт (JSON)</button>'
+    + '<input type="file" id="importFile" accept="application/json,.json" hidden></div>'
+    + '<div class="hint">Данные хранятся только в этом браузере. Экспортируйте файл, чтобы не потерять журнал.</div></div>'
+    + '<div class="setcard"><div class="setlabel">Сброс</div>'
+    + '<button class="btn btn-danger" id="resetBtn">Удалить все данные</button></div>'
+    + '<div class="about">Локальный трекер лечения<br>данные не покидают устройство</div>';
+
+  document.getElementById('startInput').addEventListener('change', e=>{
+    if(e.target.value){ state.startDate=e.target.value; save(); renderSettings(); toast('Дата начала обновлена'); }
+  });
+  const listEl = document.getElementById('apptList');
+  listEl.addEventListener('change', e=>{
+    const row=e.target.closest('.apptrow'); if(!row) return;
+    const i=+row.dataset.i, f=e.target.dataset.field;
+    if(f && state.appointments[i]){ state.appointments[i][f]=e.target.value; save(); }
+  });
+  listEl.addEventListener('click', e=>{
+    const del=e.target.closest('.del'); if(!del) return;
+    state.appointments.splice(+del.dataset.del, 1); save(); renderSettings(); toast('Приём удалён');
+  });
+  document.getElementById('apptAdd').addEventListener('click', ()=>{
+    state.appointments.push({ date:todayKey(), label:'' }); save(); renderSettings();
+  });
+  document.getElementById('exportBtn').addEventListener('click', exportData);
+  document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', importData);
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    if(confirm('Удалить все данные и историю? Действие необратимо.')){
+      state={ startDate:DEFAULT_START, appointments:DEFAULT_APPTS.map(a=>({...a})), history:{} };
+      save(); renderSettings(); toast('Данные удалены');
+    }
+  });
+}
+
+/* ---- Экспорт / импорт ---- */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='acne-tracker-'+todayKey()+'.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+function importData(e){
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const p = JSON.parse(r.result);
+      if(!p || typeof p!=='object' || typeof p.startDate!=='string') throw new Error('bad shape');
+      if(confirm('Заменить текущие данные загруженными?')){
+        state.startDate = p.startDate;
+        state.appointments = Array.isArray(p.appointments) ? p.appointments : DEFAULT_APPTS.map(a=>({...a}));
+        state.history = (p.history && typeof p.history==='object') ? p.history : {};
+        save(); go('today'); toast('Данные загружены');
+      }
+    }catch(err){ toast('⚠️ Не удалось прочитать файл'); }
+    finally{ e.target.value=''; }
+  };
+  r.readAsText(file);
+}
+
+/* ---- Навигация ---- */
+function go(screen){
+  lastRenderedDay = todayKey();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('hidden', s.id!=='screen-'+screen));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.screen===screen));
+  if(screen==='today') renderToday();
+  else if(screen==='progress') renderProgress();
+  else if(screen==='history') renderHistory();
+  else if(screen==='settings') renderSettings();
+  window.scrollTo(0,0);
+}
+
+/* ---- Toast ---- */
+let toastTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ---- Переключение чекбокса (делегирование) ---- */
+function toggleTask(id){
+  const k=todayKey();
+  if(!state.history[k]) state.history[k]={};
+  if(state.history[k][id]) delete state.history[k][id]; else state.history[k][id]=true;
+  if(Object.keys(state.history[k]).length===0) delete state.history[k];
+  save(); renderToday();
+}
+const todayEl = document.getElementById('screen-today');
+todayEl.addEventListener('click', e=>{
+  const card=e.target.closest('.task.clickable'); if(card && card.dataset.task) toggleTask(card.dataset.task);
+});
+todayEl.addEventListener('keydown', e=>{
+  if(e.key!=='Enter' && e.key!==' ') return;
+  const card=e.target.closest('.task.clickable'); if(!card) return;
+  e.preventDefault(); if(card.dataset.task) toggleTask(card.dataset.task);
+});
+
+/* ---- Авто-обновление при смене реального дня (открыли вкладку на следующий день) ---- */
+function maybeRefreshDay(){
+  if(todayKey()!==lastRenderedDay){
+    const active=document.querySelector('.tab.active');
+    go(active?active.dataset.screen:'today');
+  }
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) maybeRefreshDay(); });
+window.addEventListener('focus', maybeRefreshDay);
+
+/* ---- Старт ---- */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>go(t.dataset.screen)));
+load();
+go('today');
+</script>
+</body>
+</html>
