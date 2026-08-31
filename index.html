@@ -48,13 +48,14 @@ main{max-width:640px;margin:0 auto;padding:16px 14px 24px}
 .today-head .today-date{font-size:16px;font-weight:600;margin-top:2px}
 .today-head .daynum-row{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
 .today-head .daynum{font-size:26px;font-weight:800;letter-spacing:-.6px}
-.navbtn{flex:none;width:40px;height:40px;border:1px solid var(--line);background:var(--card);color:var(--ink);
-  border-radius:12px;font-size:22px;line-height:1;cursor:pointer;box-shadow:var(--shadow);font-family:inherit}
+.navbtn{flex:none;width:48px;height:46px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  border-radius:12px;font-size:24px;line-height:1;cursor:pointer;box-shadow:var(--shadow);font-family:inherit}
 .navbtn:disabled{opacity:.3;cursor:default;box-shadow:none}
-.navbtn:not(:disabled):active{transform:scale(.94)}
-.today-jump{flex:none;font-size:13px;font-weight:700;color:var(--primary-ink);background:var(--chip-bg);
-  border:none;border-radius:99px;padding:6px 13px;cursor:pointer;font-family:inherit}
+.navbtn:not(:disabled):active{transform:scale(.94);background:var(--chip-bg)}
+.today-jump{flex:none;font-size:14px;font-weight:700;color:var(--primary-ink);background:var(--chip-bg);
+  border:none;border-radius:99px;padding:8px 15px;cursor:pointer;font-family:inherit}
 .today-jump:active{transform:scale(.97)}
+button,.task.clickable,.hday summary{touch-action:manipulation;-webkit-tap-highlight-color:rgba(18,165,148,.18)}
 .notice.past{background:rgba(70,130,240,.12);color:#3b7bd6;border-color:rgba(70,130,240,.35)}
 .hedit{margin-top:9px;font-size:12.5px;font-weight:700;color:var(--primary-ink);background:var(--chip-bg);
   border:none;border-radius:8px;padding:7px 12px;cursor:pointer;font-family:inherit}
@@ -392,11 +393,11 @@ function renderToday(){
 
   let html = '';
   html += '<div class="today-head"><div class="daynav">'
-        + '<button class="navbtn" data-nav="prev"'+(canPrev?'':' disabled')+' aria-label="Предыдущий день">‹</button>'
+        + '<button type="button" class="navbtn" data-nav="prev"'+(canPrev?'':' disabled')+' aria-label="Предыдущий день">‹</button>'
         + '<div class="navcenter"><div class="today-label">'+relLabel+'</div><div class="today-date">'+dateStr+'</div></div>'
-        + '<button class="navbtn" data-nav="next"'+(canNext?'':' disabled')+' aria-label="Следующий день">›</button>'
+        + '<button type="button" class="navbtn" data-nav="next"'+(canNext?'':' disabled')+' aria-label="Следующий день">›</button>'
         + '</div><div class="daynum-row"><span class="daynum">'+dayLabel+'</span>'
-        + (isToday ? '' : '<button class="today-jump" data-nav="today">Сегодня →</button>')
+        + (isToday ? '' : '<button type="button" class="today-jump" data-nav="today">Сегодня →</button>')
         + '</div></div>';
   if(!isToday) html += '<div class="notice past">✏️ Открыт прошлый день ('+relLabel+') — можно дотыкать пропущенные галочки, всё сохранится.</div>';
   if(cd<1) html += '<div class="notice">Курс начнётся '+fmt(start)+'. С этого дня пункты станут активными. Дату можно изменить в «Настройках».</div>';
@@ -484,7 +485,7 @@ function renderHistory(){
       + '<span class="hdate">'+cap(fmt(dk,{weekday:'short',day:'numeric',month:'long'}))+' · день '+cd+'</span>'
       + '<span class="hcount'+okCls+'">'+done+' / '+req+'</span></summary>'
       + '<div class="hbody">'+(names.length?names.map(n=>'✓ '+n).join('<br>'):'ничего не отмечено')
-      + '<br><button class="hedit" data-day="'+dk+'">✏️ Отмечать в этом дне</button></div></details>');
+      + '<br><button type="button" class="hedit" data-day="'+dk+'">✏️ Отмечать в этом дне</button></div></details>');
     if(rows.length>=200) break;
   }
   html += rows.join('');
@@ -637,9 +638,13 @@ document.getElementById('screen-history').addEventListener('click', e=>{
 
 /* ---- Авто-обновление при смене реального дня (открыли вкладку на следующий день) ---- */
 function maybeRefreshDay(){
-  if(todayKey()!==lastRenderedDay){
+  const t = todayKey();
+  if(t !== lastRenderedDay){
+    // день сменился: если смотрели «сегодня» — следуем за новым днём (назад всегда можно вернуться стрелкой)
+    if(viewDate === lastRenderedDay) viewDate = t;
+    lastRenderedDay = t;
     const active=document.querySelector('.tab.active');
-    go(active?active.dataset.screen:'today');
+    go(active ? active.dataset.screen : 'today');
   }
 }
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) maybeRefreshDay(); });
