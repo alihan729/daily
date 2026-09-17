@@ -187,13 +187,15 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
 
 <main>
   <section id="screen-today" class="screen"></section>
+  <section id="screen-eyes" class="screen hidden"></section>
   <section id="screen-progress" class="screen hidden"></section>
   <section id="screen-history" class="screen hidden"></section>
   <section id="screen-settings" class="screen hidden"></section>
 </main>
 
 <nav class="tabs">
-  <button class="tab active" data-screen="today"><span class="ti">🗓️</span><span>Сегодня</span></button>
+  <button class="tab active" data-screen="today"><span class="ti">🧴</span><span>Кожа</span></button>
+  <button class="tab" data-screen="eyes"><span class="ti">👁️</span><span>Глаза</span></button>
   <button class="tab" data-screen="progress"><span class="ti">📊</span><span>Прогресс</span></button>
   <button class="tab" data-screen="history"><span class="ti">📜</span><span>История</span></button>
   <button class="tab" data-screen="settings"><span class="ti">⚙️</span><span>Настройки</span></button>
@@ -210,6 +212,7 @@ const DEFAULT_START = '2026-08-31'; // старт курса — 31 август
 const DEFAULT_APPTS = [
   { date:'2026-10-05', label:'5–6 октября 2026' },
 ];
+const EYES_START = '2026-09-17'; // старт ухода за глазами
 
 /* ---- Данные курса ---- */
 const BLOCKS = [
@@ -220,6 +223,9 @@ const BLOCKS = [
     note:'Базирон: первые 14 дней — через день (в «пустой» день карточка станет «пропуск»), с 15-го дня — каждый день.' },
   { id:'dinner',    title:'Ужин',    subtitle:'во время еды',      icon:'🍽️' },
   { id:'evening',   title:'Вечер',   subtitle:'перед сном',        icon:'🌙' },
+  // --- Глаза (course:'eyes') ---
+  { id:'eye_am', course:'eyes', title:'Утро',  subtitle:'после пробуждения', icon:'🌅' },
+  { id:'eye_pm', course:'eyes', title:'Вечер', subtitle:'перед сном',        icon:'🌙' },
 ];
 
 // Пометка «когда относительно еды» — цветной тег на карточке
@@ -248,6 +254,14 @@ const TASKS = [
   { id:'wash_pm',    block:'evening',   name:'Умывание',               detail:'Bioderma Sensibio · гель, умыться тёплой водой',            duration:null },
   { id:'klenzit',    block:'evening',   name:'Клензит С',              detail:'Тонкий слой на всё лицо · на ночь, перед сном',             duration:56 },
   { id:'moist_pm',   block:'evening',   name:'Увлажняющий крем',       detail:'Тонкий слой на всё лицо · Avène Комедомед / Dr. Althea 345', duration:null },
+
+  // --- Глаза (без ограничения по срокам) ---
+  { id:'oftolik_am',   course:'eyes', block:'eye_am', name:'Офтолик софт', detail:'Капли — в оба глаза',                 duration:null },
+  { id:'allerweg',     course:'eyes', block:'eye_am', name:'Аллервег',     detail:'1 раз в день — утром или перед сном', duration:null },
+  { id:'ascorutin_am', course:'eyes', block:'eye_am', name:'Аско рутин',   detail:'Таблетка · 1-й приём из 2',           duration:null },
+
+  { id:'oftolik_pm',   course:'eyes', block:'eye_pm', name:'Офтолик софт', detail:'Капли — в оба глаза',                 duration:null },
+  { id:'ascorutin_pm', course:'eyes', block:'eye_pm', name:'Аско рутин',   detail:'Таблетка · 2-й приём из 2',           duration:null },
 ];
 
 const COURSE_MEDS = [
@@ -259,6 +273,9 @@ const COURSE_MEDS = [
   { name:'Клензит С',              duration:56 },
 ];
 const ROUTINE = ['Умывание — Bioderma Sensibio', 'Увлажняющий крем', 'SPF (утром)'];
+const EYE_ITEMS = ['Офтолик софт — капли', 'Аллервег', 'Аско рутин'];
+// старт курса по разделу: у глаз свой (чтобы прошлые дни «Истории» не раздувались)
+function courseStart(course){ return course==='eyes' ? EYES_START : state.startDate; }
 
 /* ---- Работа с датами ---- */
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -312,7 +329,7 @@ function isChecked(id, k){ return !!(state.history[k] && state.history[k][id]); 
 
 /* ---- Статус пункта на конкретный день ---- */
 function statusOf(task, dateKey){
-  const cd = dayDiff(state.startDate, dateKey) + 1; // 1-й день курса = дата начала
+  const cd = dayDiff(courseStart(task.course), dateKey) + 1; // 1-й день курса = дата начала (у глаз свой старт)
   if(cd < 1) return { s:'notstarted', cd };
   if(task.duration !== null && cd > task.duration) return { s:'completed', cd };
   if(task.special === 'baziron' && cd <= 14 && cd % 2 === 0) return { s:'rest', cd }; // первые 14 дней — через день
@@ -354,40 +371,35 @@ function cardHTML(task, dateKey){
   }
   // notstarted
   return '<div class="task done"><span class="check"></span>'
-    + '<span class="body"><span class="name">'+task.name+'</span><span class="detail">начнётся '+fmt(state.startDate,{day:'numeric',month:'long'})+'</span></span></div>';
+    + '<span class="body"><span class="name">'+task.name+'</span><span class="detail">начнётся '+fmt(courseStart(task.course),{day:'numeric',month:'long'})+'</span></span></div>';
 }
 
-/* ---- Экран «Сегодня» ---- */
-function renderToday(){
-  const today = todayKey(), start = state.startDate, vk = viewDate;
+/* ---- Экран чек-листа (Кожа / Глаза) ---- */
+function renderChecklist(course, elId){
+  const today = todayKey(), start = courseStart(course), vk = viewDate;
+  const isEyes = course==='eyes';
   const cd = dayDiff(start, vk) + 1;
   const rel = dayDiff(vk, today);   // сколько дней назад (today − vk)
   const isToday = rel === 0;
 
   let required=0, done=0;
-  for(const t of TASKS){ const st=statusOf(t,vk); if(st.s==='active'){ required++; if(isChecked(t.id,vk)) done++; } }
+  for(const t of TASKS){ if((t.course||'skin')!==course) continue; const st=statusOf(t,vk); if(st.s==='active'){ required++; if(isChecked(t.id,vk)) done++; } }
   const pct = required ? Math.round(done/required*100) : 0;
   const allDone = required>0 && done===required;
-
-  // Баннер ближайшего приёма у врача (всегда от сегодняшней даты)
-  const na = nextAppt();
-  let banner;
-  if(na){
-    const d = dayDiff(today, na.date);
-    banner = (d===0) ? '📅 Сегодня приём у врача — '+apptText(na)
-                     : '📅 Ближайший приём у врача — '+apptText(na)+' · через '+d+' '+daysWord(d);
-  } else {
-    banner = '📅 Приёмы у врача не запланированы — добавьте в «Настройках»';
-  }
 
   const dateStr = cap(fmt(vk,{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
   const relLabel = rel===0 ? 'сегодня' : rel===1 ? 'вчера' : (rel+' '+daysWord(rel)+' назад');
   let dayLabel;
-  if(cd<1){ const u=dayDiff(vk,start); dayLabel = (u===1 ? 'Старт завтра' : 'Старт через '+u+' '+daysWord(u)); }
-  else dayLabel = 'День '+cd+' курса';
+  if(isEyes){
+    dayLabel = cd<1 ? ('Уход начнётся '+fmt(start,{day:'numeric',month:'long'})) : 'Ежедневный уход за глазами';
+  } else if(cd<1){
+    const u=dayDiff(vk,start); dayLabel = (u===1 ? 'Старт завтра' : 'Старт через '+u+' '+daysWord(u));
+  } else {
+    dayLabel = 'День '+cd+' курса';
+  }
 
-  // границы листания: от старта курса до сегодня
-  const lo = (dayDiff(start, today) >= 0) ? start : today;
+  // границы листания: от старта курса кожи до сегодня (общая шкала дней)
+  const lo = (dayDiff(state.startDate, today) >= 0) ? state.startDate : today;
   const canPrev = dayDiff(lo, vk) > 0;
   const canNext = dayDiff(vk, today) > 0;
 
@@ -400,8 +412,16 @@ function renderToday(){
         + (isToday ? '' : '<button type="button" class="today-jump" data-nav="today">Сегодня →</button>')
         + '</div></div>';
   if(!isToday) html += '<div class="notice past">✏️ Открыт прошлый день ('+relLabel+') — можно дотыкать пропущенные галочки, всё сохранится.</div>';
-  if(cd<1) html += '<div class="notice">Курс начнётся '+fmt(start)+'. С этого дня пункты станут активными. Дату можно изменить в «Настройках».</div>';
-  html += '<div class="banner">'+banner+'</div>';
+  if(cd<1) html += '<div class="notice">'+(isEyes?'Уход за глазами начнётся ':'Курс начнётся ')+fmt(start)+'. С этого дня пункты станут активными.'+(isEyes?'':' Дату можно изменить в «Настройках».')+'</div>';
+  if(!isEyes){
+    const na = nextAppt();
+    let banner;
+    if(na){ const d = dayDiff(today, na.date);
+      banner = (d===0) ? '📅 Сегодня приём у врача — '+apptText(na)
+                       : '📅 Ближайший приём у врача — '+apptText(na)+' · через '+d+' '+daysWord(d);
+    } else { banner = '📅 Приёмы у врача не запланированы — добавьте в «Настройках»'; }
+    html += '<div class="banner">'+banner+'</div>';
+  }
   html += '<div class="summary"><div class="summary-row"><span>'
         + (allDone ? (isToday?'🎉 Всё на сегодня выполнено':'🎉 Всё за этот день выполнено')
                    : (isToday?'Выполнено сегодня':'Выполнено за день'))
@@ -409,14 +429,17 @@ function renderToday(){
         + '<div class="bar"><div class="bar-fill'+(allDone?' ok':'')+'" style="width:'+pct+'%"></div></div></div>';
 
   for(const b of BLOCKS){
+    if((b.course||'skin')!==course) continue;
     html += '<section class="block"><div class="block-head"><span class="block-icon">'+b.icon+'</span>'
           + '<span class="block-title">'+b.title+'</span><span class="block-sub">'+b.subtitle+'</span></div>';
     if(b.note) html += '<div class="block-note">'+b.note+'</div>';
-    for(const t of TASKS){ if(t.block===b.id) html += cardHTML(t, vk); }
+    for(const t of TASKS){ if((t.course||'skin')===course && t.block===b.id) html += cardHTML(t, vk); }
     html += '</section>';
   }
-  document.getElementById('screen-today').innerHTML = html;
+  document.getElementById(elId).innerHTML = html;
 }
+function renderToday(){ renderChecklist('skin', 'screen-today'); }
+function renderEyes(){ renderChecklist('eyes', 'screen-eyes'); }
 
 /* ---- Экран «Прогресс» ---- */
 function renderProgress(){
@@ -461,6 +484,10 @@ function renderProgress(){
   }
   html += '<div class="p-sub">Домашний уход · без ограничения по дням</div>';
   for(const r of ROUTINE){
+    html += '<div class="pcard routine"><span class="pname">'+r+'</span><span class="pval muted">ежедневно</span></div>';
+  }
+  html += '<div class="p-sub">👁️ Глаза · без ограничения по дням</div>';
+  for(const r of EYE_ITEMS){
     html += '<div class="pcard routine"><span class="pname">'+r+'</span><span class="pval muted">ежедневно</span></div>';
   }
   document.getElementById('screen-progress').innerHTML = html;
@@ -584,6 +611,7 @@ function go(screen){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('hidden', s.id!=='screen-'+screen));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.screen===screen));
   if(screen==='today') renderToday();
+  else if(screen==='eyes') renderEyes();
   else if(screen==='progress') renderProgress();
   else if(screen==='history') renderHistory();
   else if(screen==='settings') renderSettings();
@@ -599,37 +627,45 @@ function toast(msg){
 }
 
 /* ---- Переключение чекбокса (делегирование) ---- */
+function renderActiveChecklist(){
+  const active=document.querySelector('.tab.active');
+  const s = active ? active.dataset.screen : 'today';
+  if(s==='eyes') renderEyes(); else renderToday();
+}
 function toggleTask(id){
   const k=viewDate; // отмечаем в том дне, который сейчас открыт
   if(!state.history[k]) state.history[k]={};
   if(state.history[k][id]) delete state.history[k][id]; else state.history[k][id]=true;
   if(Object.keys(state.history[k]).length===0) delete state.history[k];
-  save(); renderToday();
+  save(); renderActiveChecklist();
 }
 function setViewDate(k){
   const today=todayKey();
   const lo = (dayDiff(state.startDate, today) >= 0) ? state.startDate : today;
   if(dayDiff(today, k) > 0) k = today; // не листаем в будущее
   if(dayDiff(k, lo) > 0) k = lo;       // не раньше начала курса
-  viewDate = k; renderToday(); window.scrollTo(0,0);
+  viewDate = k; renderActiveChecklist(); window.scrollTo(0,0);
 }
-const todayEl = document.getElementById('screen-today');
-todayEl.addEventListener('click', e=>{
-  const nav=e.target.closest('[data-nav]');
-  if(nav){
-    const d=nav.dataset.nav;
-    if(d==='prev') setViewDate(addDays(viewDate,-1));
-    else if(d==='next') setViewDate(addDays(viewDate,1));
-    else if(d==='today') setViewDate(todayKey());
-    return;
-  }
-  const card=e.target.closest('.task.clickable'); if(card && card.dataset.task) toggleTask(card.dataset.task);
-});
-todayEl.addEventListener('keydown', e=>{
-  if(e.key!=='Enter' && e.key!==' ') return;
-  const card=e.target.closest('.task.clickable'); if(!card) return;
-  e.preventDefault(); if(card.dataset.task) toggleTask(card.dataset.task);
-});
+function attachChecklistHandlers(el){
+  el.addEventListener('click', e=>{
+    const nav=e.target.closest('[data-nav]');
+    if(nav){
+      const d=nav.dataset.nav;
+      if(d==='prev') setViewDate(addDays(viewDate,-1));
+      else if(d==='next') setViewDate(addDays(viewDate,1));
+      else if(d==='today') setViewDate(todayKey());
+      return;
+    }
+    const card=e.target.closest('.task.clickable'); if(card && card.dataset.task) toggleTask(card.dataset.task);
+  });
+  el.addEventListener('keydown', e=>{
+    if(e.key!=='Enter' && e.key!==' ') return;
+    const card=e.target.closest('.task.clickable'); if(!card) return;
+    e.preventDefault(); if(card.dataset.task) toggleTask(card.dataset.task);
+  });
+}
+attachChecklistHandlers(document.getElementById('screen-today'));
+attachChecklistHandlers(document.getElementById('screen-eyes'));
 // «Отмечать в этом дне» из «Истории» → открыть этот день на экране «Сегодня»
 document.getElementById('screen-history').addEventListener('click', e=>{
   const b=e.target.closest('.hedit'); if(!b) return;
@@ -652,7 +688,7 @@ window.addEventListener('focus', maybeRefreshDay);
 
 /* ---- Старт ---- */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
-  if(t.dataset.screen==='today') viewDate = todayKey(); // нижняя вкладка «Сегодня» всегда открывает сегодня
+  if(t.dataset.screen==='today' || t.dataset.screen==='eyes') viewDate = todayKey(); // вкладки-чеклисты открывают сегодня
   go(t.dataset.screen);
 }));
 load();
