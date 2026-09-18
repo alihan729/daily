@@ -65,6 +65,12 @@ button,.task.clickable,.hday summary{touch-action:manipulation;-webkit-tap-highl
   border-radius:12px;padding:11px 14px;font-size:14px;font-weight:600}
 .notice{background:var(--alert-bg);color:var(--alert-ink);border:1px solid var(--alert-line);
   border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px;font-weight:600}
+.notice.finished{background:var(--chip-bg);color:var(--primary-ink);border-color:transparent}
+.linkbtn{display:inline-block;margin-top:6px;background:none;border:none;color:var(--primary-ink);
+  font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:2px 0}
+.finish-eyes{display:block;width:100%;margin:4px 0 10px;padding:13px;border:1px solid var(--danger-line);
+  background:transparent;color:var(--danger);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.finish-eyes:active{transform:scale(.99)}
 
 .summary{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;
   box-shadow:var(--shadow);margin-bottom:20px}
@@ -297,7 +303,7 @@ function apptCountdown(a){ const d=dayDiff(todayKey(),a.date); if(d>0) return '�
 function nextAppt(){ const t=todayKey(); const up=sortedAppts().filter(a=>dayDiff(t,a.date)>=0); return up.length?up[0]:null; }
 
 /* ---- Состояние ---- */
-let state = { startDate: DEFAULT_START, appointments: DEFAULT_APPTS.map(a=>({...a})), history:{} };
+let state = { startDate: DEFAULT_START, appointments: DEFAULT_APPTS.map(a=>({...a})), eyesEnd: null, history:{} };
 let lastRenderedDay = ''; // для авто-обновления при смене реального дня
 let viewDate = todayKey(); // какой день показан на экране «Сегодня» (можно листать назад)
 function load(){
@@ -307,6 +313,7 @@ function load(){
       if(p && typeof p==='object'){
         if(typeof p.startDate==='string') state.startDate = p.startDate;
         if(Array.isArray(p.appointments)) state.appointments = p.appointments;
+        state.eyesEnd = (typeof p.eyesEnd==='string') ? p.eyesEnd : null;
         state.history = (p.history && typeof p.history==='object') ? p.history : {};
         if(p.v !== SCHEMA) migrate();
       }
@@ -331,6 +338,7 @@ function isChecked(id, k){ return !!(state.history[k] && state.history[k][id]); 
 function statusOf(task, dateKey){
   const cd = dayDiff(courseStart(task.course), dateKey) + 1; // 1-й день курса = дата начала (у глаз свой старт)
   if(cd < 1) return { s:'notstarted', cd };
+  if(task.course==='eyes' && state.eyesEnd && dayDiff(state.eyesEnd, dateKey) >= 0) return { s:'completed', cd }; // уход остановлен пользователем
   if(task.duration !== null && cd > task.duration) return { s:'completed', cd };
   if(task.special === 'baziron' && cd <= 14 && cd % 2 === 0) return { s:'rest', cd }; // первые 14 дней — через день
   return { s:'active', cd };
@@ -366,8 +374,9 @@ function cardHTML(task, dateKey){
       + '<span class="chips"><span class="chip muted">пропуск</span></span></div>';
   }
   if(st.s==='completed'){
+    const doneTxt = task.course==='eyes' ? 'Уход остановлен ✅' : 'Курс завершён ✅';
     return '<div class="task done"><span class="check done"></span>'
-      + '<span class="body"><span class="name">'+task.name+'</span><span class="detail">Курс завершён ✅</span></span></div>';
+      + '<span class="body"><span class="name">'+task.name+'</span><span class="detail">'+doneTxt+'</span></span></div>';
   }
   // notstarted
   return '<div class="task done"><span class="check"></span>'
@@ -389,9 +398,11 @@ function renderChecklist(course, elId){
 
   const dateStr = cap(fmt(vk,{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
   const relLabel = rel===0 ? 'сегодня' : rel===1 ? 'вчера' : (rel+' '+daysWord(rel)+' назад');
+  const eyesFinished = isEyes && state.eyesEnd && dayDiff(state.eyesEnd, vk) >= 0; // просматриваемый день — после остановки
   let dayLabel;
   if(isEyes){
-    dayLabel = cd<1 ? ('Уход начнётся '+fmt(start,{day:'numeric',month:'long'})) : 'Ежедневный уход за глазами';
+    dayLabel = eyesFinished ? 'Уход за глазами остановлен'
+             : (cd<1 ? ('Уход начнётся '+fmt(start,{day:'numeric',month:'long'})) : 'Ежедневный уход за глазами');
   } else if(cd<1){
     const u=dayDiff(vk,start); dayLabel = (u===1 ? 'Старт завтра' : 'Старт через '+u+' '+daysWord(u));
   } else {
@@ -422,11 +433,16 @@ function renderChecklist(course, elId){
     } else { banner = '📅 Приёмы у врача не запланированы — добавьте в «Настройках»'; }
     html += '<div class="banner">'+banner+'</div>';
   }
-  html += '<div class="summary"><div class="summary-row"><span>'
-        + (allDone ? (isToday?'🎉 Всё на сегодня выполнено':'🎉 Всё за этот день выполнено')
-                   : (isToday?'Выполнено сегодня':'Выполнено за день'))
-        + '</span><span>'+done+' из '+required+'</span></div>'
-        + '<div class="bar"><div class="bar-fill'+(allDone?' ok':'')+'" style="width:'+pct+'%"></div></div></div>';
+  if(eyesFinished){
+    html += '<div class="notice finished">✅ Уход за глазами остановлен '+fmt(state.eyesEnd,{day:'numeric',month:'long'})+'. Пункты больше отмечать не нужно.'
+          + '<br><button type="button" class="linkbtn" data-eyes="resume">↻ Возобновить уход</button></div>';
+  } else {
+    html += '<div class="summary"><div class="summary-row"><span>'
+          + (allDone ? (isToday?'🎉 Всё на сегодня выполнено':'🎉 Всё за этот день выполнено')
+                     : (isToday?'Выполнено сегодня':'Выполнено за день'))
+          + '</span><span>'+done+' из '+required+'</span></div>'
+          + '<div class="bar"><div class="bar-fill'+(allDone?' ok':'')+'" style="width:'+pct+'%"></div></div></div>';
+  }
 
   for(const b of BLOCKS){
     if((b.course||'skin')!==course) continue;
@@ -435,6 +451,10 @@ function renderChecklist(course, elId){
     if(b.note) html += '<div class="block-note">'+b.note+'</div>';
     for(const t of TASKS){ if((t.course||'skin')===course && t.block===b.id) html += cardHTML(t, vk); }
     html += '</section>';
+  }
+  // Кнопка остановки — только на «Глаза», сегодня, пока уход активен
+  if(isEyes && isToday && !state.eyesEnd){
+    html += '<button type="button" class="finish-eyes" data-eyes="finish">■ Завершить / остановить уход за глазами</button>';
   }
   document.getElementById(elId).innerHTML = html;
 }
@@ -486,9 +506,10 @@ function renderProgress(){
   for(const r of ROUTINE){
     html += '<div class="pcard routine"><span class="pname">'+r+'</span><span class="pval muted">ежедневно</span></div>';
   }
-  html += '<div class="p-sub">👁️ Глаза · без ограничения по дням</div>';
+  const eyeStat = state.eyesEnd ? ('остановлен '+fmt(state.eyesEnd,{day:'numeric',month:'short'})) : 'ежедневно';
+  html += '<div class="p-sub">👁️ Глаза · '+(state.eyesEnd?'уход остановлен':'без ограничения по дням')+'</div>';
   for(const r of EYE_ITEMS){
-    html += '<div class="pcard routine"><span class="pname">'+r+'</span><span class="pval muted">ежедневно</span></div>';
+    html += '<div class="pcard routine"><span class="pname">'+r+'</span><span class="pval muted">'+eyeStat+'</span></div>';
   }
   document.getElementById('screen-progress').innerHTML = html;
 }
@@ -504,13 +525,18 @@ function renderHistory(){
   }
   const rows = [];
   for(let dk=k; dayDiff(start,dk)>=0; dk=addDays(dk,-1)){
-    let req=0, done=0; const names=[];
-    for(const t of TASKS){ const st=statusOf(t,dk); if(st.s==='active'){ req++; if(isChecked(t.id,dk)){ done++; names.push(t.name); } } }
+    let sReq=0,sDone=0, eReq=0,eDone=0; const names=[];
+    for(const t of TASKS){ const st=statusOf(t,dk); if(st.s!=='active') continue;
+      if(t.course==='eyes'){ eReq++; if(isChecked(t.id,dk)){ eDone++; names.push('👁 '+t.name); } }
+      else { sReq++; if(isChecked(t.id,dk)){ sDone++; names.push(t.name); } }
+    }
     const cd = dayDiff(start,dk)+1;
-    const okCls = (req>0 && done===req) ? ' ok' : '';
+    const allDone = (sReq+eReq)>0 && sDone===sReq && eDone===eReq;
+    // счёт раздельно: кожа и (если в этот день был) уход за глазами
+    const countStr = eReq>0 ? ('🧴 '+sDone+'/'+sReq+' · 👁 '+eDone+'/'+eReq) : (sDone+' / '+sReq);
     rows.push('<details class="hday"'+(dk===k?' open':'')+'><summary>'
       + '<span class="hdate">'+cap(fmt(dk,{weekday:'short',day:'numeric',month:'long'}))+' · день '+cd+'</span>'
-      + '<span class="hcount'+okCls+'">'+done+' / '+req+'</span></summary>'
+      + '<span class="hcount'+(allDone?' ok':'')+'">'+countStr+'</span></summary>'
       + '<div class="hbody">'+(names.length?names.map(n=>'✓ '+n).join('<br>'):'ничего не отмечено')
       + '<br><button type="button" class="hedit" data-day="'+dk+'">✏️ Отмечать в этом дне</button></div></details>');
     if(rows.length>=200) break;
@@ -571,7 +597,7 @@ function renderSettings(){
   document.getElementById('importFile').addEventListener('change', importData);
   document.getElementById('resetBtn').addEventListener('click', ()=>{
     if(confirm('Удалить все данные и историю? Действие необратимо.')){
-      state={ startDate:DEFAULT_START, appointments:DEFAULT_APPTS.map(a=>({...a})), history:{} };
+      state={ startDate:DEFAULT_START, appointments:DEFAULT_APPTS.map(a=>({...a})), eyesEnd:null, history:{} };
       save(); renderSettings(); toast('Данные удалены');
     }
   });
@@ -596,6 +622,7 @@ function importData(e){
       if(confirm('Заменить текущие данные загруженными?')){
         state.startDate = p.startDate;
         state.appointments = Array.isArray(p.appointments) ? p.appointments : DEFAULT_APPTS.map(a=>({...a}));
+        state.eyesEnd = (typeof p.eyesEnd==='string') ? p.eyesEnd : null;
         state.history = (p.history && typeof p.history==='object') ? p.history : {};
         save(); viewDate = todayKey(); go('today'); toast('Данные загружены');
       }
@@ -646,8 +673,19 @@ function setViewDate(k){
   if(dayDiff(k, lo) > 0) k = lo;       // не раньше начала курса
   viewDate = k; renderActiveChecklist(); window.scrollTo(0,0);
 }
+function handleEyes(action){
+  if(action==='finish'){
+    if(confirm('Завершить уход за глазами? Пункты станут неактивными. Прошлые дни и историю можно смотреть, а позже — возобновить.')){
+      state.eyesEnd = todayKey(); save(); renderEyes(); toast('Уход за глазами остановлен');
+    }
+  } else if(action==='resume'){
+    state.eyesEnd = null; save(); renderEyes(); toast('Уход за глазами возобновлён');
+  }
+}
 function attachChecklistHandlers(el){
   el.addEventListener('click', e=>{
+    const eb=e.target.closest('[data-eyes]');
+    if(eb){ handleEyes(eb.dataset.eyes); return; }
     const nav=e.target.closest('[data-nav]');
     if(nav){
       const d=nav.dataset.nav;
