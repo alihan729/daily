@@ -563,15 +563,20 @@ function renderHistory(){
   }
   const rows = [];
   for(let dk=k; dayDiff(start,dk)>=0; dk=addDays(dk,-1)){
-    let sReq=0,sDone=0, eReq=0,eDone=0; const names=[];
+    let sReq=0,sDone=0, eReq=0,eDone=0, cReq=0,cDone=0; const names=[];
     for(const t of TASKS){ const st=statusOf(t,dk); if(st.s!=='active') continue;
       if(t.course==='eyes'){ eReq++; if(isChecked(t.id,dk)){ eDone++; names.push('👁 '+t.name); } }
+      else if(t.course==='supplements'){ cReq++; if(isChecked(t.id,dk)){ cDone++; names.push('💊 '+t.name); } }
       else { sReq++; if(isChecked(t.id,dk)){ sDone++; names.push(t.name); } }
     }
     const cd = dayDiff(start,dk)+1;
-    const allDone = (sReq+eReq)>0 && sDone===sReq && eDone===eReq;
-    // счёт раздельно: кожа и (если в этот день был) уход за глазами
-    const countStr = eReq>0 ? ('🧴 '+sDone+'/'+sReq+' · 👁 '+eDone+'/'+eReq) : (sDone+' / '+sReq);
+    const totReq=sReq+eReq+cReq, totDone=sDone+eDone+cDone;
+    const allDone = totReq>0 && totDone===totReq;
+    // счёт раздельно по разделам (кожа / глаза / добавки), если раздел активен в этот день
+    const parts=['🧴 '+sDone+'/'+sReq];
+    if(eReq>0) parts.push('👁 '+eDone+'/'+eReq);
+    if(cReq>0) parts.push('💊 '+cDone+'/'+cReq);
+    const countStr = (eReq>0||cReq>0) ? parts.join(' · ') : (sDone+' / '+sReq);
     rows.push('<details class="hday"'+(dk===k?' open':'')+'><summary>'
       + '<span class="hdate">'+cap(fmt(dk,{weekday:'short',day:'numeric',month:'long'}))+' · день '+cd+'</span>'
       + '<span class="hcount'+(allDone?' ok':'')+'">'+countStr+'</span></summary>'
