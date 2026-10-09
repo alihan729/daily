@@ -244,6 +244,7 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
 'use strict';
 const KEY = 'acneTracker.v1';
 const SCHEMA = 3; // версия данных (для миграций)
+const APP_VERSION = 2; // версия приложения для авто-обновления PWA — ДЕРЖАТЬ В СИНХРОНЕ с version.json (при каждом деплое поднимать оба)
 const DEFAULT_START = '2026-08-31'; // старт курса — 31 августа 2026
 // Приёмы у врача по умолчанию (редактируются в «Настройках»)
 const DEFAULT_APPTS = [
@@ -884,8 +885,30 @@ function maybeRefreshDay(){
     go(active ? active.dataset.screen : 'today');
   }
 }
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) maybeRefreshDay(); });
-window.addEventListener('focus', maybeRefreshDay);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ maybeRefreshDay(); checkForUpdate(); } });
+window.addEventListener('focus', ()=>{ maybeRefreshDay(); checkForUpdate(); });
+
+/* ---- Авто-обновление приложения (обходит кэш иконки на домашнем экране iOS) ---- */
+// В index.html зашита APP_VERSION; рядом лежит version.json с актуальным номером.
+// Если на сервере версия новее запущенной — перезагружаемся на URL с ?v=N (другой адрес => мимо HTTP-кэша).
+let updCheckedAt = 0;
+async function checkForUpdate(){
+  const now = Date.now();
+  if(now - updCheckedAt < 20000) return; // не чаще раза в 20 секунд
+  updCheckedAt = now;
+  try{
+    const r = await fetch('version.json?cb=' + now, { cache:'no-store' });
+    if(!r.ok) return;
+    const data = await r.json();
+    const latest = Number(data && data.version);
+    if(!latest || latest <= APP_VERSION) return; // актуально или не распарсилось — ничего не делаем
+    let tried = null;
+    try{ tried = sessionStorage.getItem('updTried'); }catch(e){}
+    if(tried === String(latest)) return; // уже пробовали в этой сессии — защита от зацикливания
+    try{ sessionStorage.setItem('updTried', String(latest)); }catch(e){}
+    location.replace(location.pathname + '?v=' + latest); // жёсткая загрузка свежей версии
+  }catch(e){ /* офлайн или version.json недоступен — работаем из кэша, тихо */ }
+}
 
 /* ---- Старт ---- */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
@@ -895,6 +918,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
 load();
 viewDate = todayKey(); // при запуске всегда открываем сегодня
 go('today');
+checkForUpdate(); // проверить, нет ли свежей версии на сервере
 </script>
 </body>
 </html>
