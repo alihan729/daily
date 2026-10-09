@@ -190,6 +190,29 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
   background:#222c33;color:#fff;padding:11px 18px;border-radius:99px;font-size:14px;font-weight:600;
   opacity:0;pointer-events:none;transition:.25s;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.28);max-width:90%}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Water */
+.water-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 16px;
+  box-shadow:var(--shadow);text-align:center;margin-bottom:16px}
+.water-big{font-size:46px;font-weight:800;letter-spacing:-1px;line-height:1}
+.water-big .water-of{font-size:26px;color:var(--muted);font-weight:700}
+.water-unit{color:var(--muted);font-size:14px;font-weight:600;margin-top:6px}
+.water-status{margin-top:12px;font-size:15px;font-weight:700;color:var(--primary-ink)}
+.cups{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px}
+.cups .cup{font-size:28px;line-height:1;opacity:.25;filter:grayscale(1);transition:.2s}
+.cups .cup.full{opacity:1;filter:none}
+.water-btns{display:flex;gap:10px;margin-bottom:14px}
+.water-plus{flex:1;padding:18px;border:none;border-radius:14px;background:var(--primary);color:#fff;
+  font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:var(--shadow)}
+.water-plus:active{transform:scale(.98)}
+.water-minus{flex:none;width:64px;border:1px solid var(--line);border-radius:14px;background:var(--card);
+  color:var(--ink);font-size:28px;font-weight:700;line-height:1;cursor:pointer;font-family:inherit}
+.water-minus:disabled{opacity:.3;cursor:default}
+.water-minus:not(:disabled):active{transform:scale(.96);background:var(--chip-bg)}
+.water-set{display:flex;gap:10px;flex-wrap:wrap}
+.water-set label{flex:1;min-width:130px;font-size:13px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+.water-set input[type=number]{padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);font-size:15px;font-family:inherit;font-weight:700;width:100%}
 </style>
 </head>
 <body>
@@ -199,6 +222,7 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
   <section id="screen-today" class="screen"></section>
   <section id="screen-eyes" class="screen hidden"></section>
   <section id="screen-supp" class="screen hidden"></section>
+  <section id="screen-water" class="screen hidden"></section>
   <section id="screen-progress" class="screen hidden"></section>
   <section id="screen-history" class="screen hidden"></section>
   <section id="screen-settings" class="screen hidden"></section>
@@ -208,6 +232,7 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
   <button class="tab active" data-screen="today"><span class="ti">🧴</span><span>Кожа</span></button>
   <button class="tab" data-screen="eyes"><span class="ti">👁️</span><span>Глаза</span></button>
   <button class="tab" data-screen="supp"><span class="ti">💊</span><span>Добавки</span></button>
+  <button class="tab" data-screen="water"><span class="ti">💧</span><span>Вода</span></button>
   <button class="tab" data-screen="progress"><span class="ti">📊</span><span>Прогресс</span></button>
   <button class="tab" data-screen="history"><span class="ti">📜</span><span>История</span></button>
   <button class="tab" data-screen="settings"><span class="ti">⚙️</span><span>Настройки</span></button>
@@ -317,7 +342,10 @@ function apptCountdown(a){ const d=dayDiff(todayKey(),a.date); if(d>0) return '�
 function nextAppt(){ const t=todayKey(); const up=sortedAppts().filter(a=>dayDiff(t,a.date)>=0); return up.length?up[0]:null; }
 
 /* ---- Состояние ---- */
-let state = { startDate: DEFAULT_START, appointments: DEFAULT_APPTS.map(a=>({...a})), eyesEnd: null, stopped:{}, history:{} };
+const WATER_CUP_DEFAULT = 300;    // объём одной кружки, мл
+const WATER_GOAL_DEFAULT = 3000;  // дневная норма, мл (~30–35 мл/кг + запас на креатин)
+let state = { startDate: DEFAULT_START, appointments: DEFAULT_APPTS.map(a=>({...a})), eyesEnd: null, stopped:{}, history:{},
+  water:{}, waterCup: WATER_CUP_DEFAULT, waterGoalMl: WATER_GOAL_DEFAULT };
 let lastRenderedDay = ''; // для авто-обновления при смене реального дня
 let viewDate = todayKey(); // какой день показан на экране «Сегодня» (можно листать назад)
 function load(){
@@ -330,6 +358,9 @@ function load(){
         state.eyesEnd = (typeof p.eyesEnd==='string') ? p.eyesEnd : null;
         state.stopped = (p.stopped && typeof p.stopped==='object') ? p.stopped : {};
         state.history = (p.history && typeof p.history==='object') ? p.history : {};
+        if(p.water && typeof p.water==='object') state.water = p.water;
+        if(typeof p.waterCup==='number' && p.waterCup>0) state.waterCup = p.waterCup;
+        if(typeof p.waterGoalMl==='number' && p.waterGoalMl>0) state.waterGoalMl = p.waterGoalMl;
         if(p.v !== SCHEMA) migrate();
       }
     }
@@ -487,6 +518,47 @@ function renderToday(){ renderChecklist('skin', 'screen-today'); }
 function renderEyes(){ renderChecklist('eyes', 'screen-eyes'); }
 function renderSupp(){ renderChecklist('supplements', 'screen-supp'); }
 
+/* ---- Экран «Вода» ---- */
+function cupsWord(n){ return plural(n,'кружка','кружки','кружек'); }
+function waterGoalCups(){ return Math.max(1, Math.ceil(state.waterGoalMl / state.waterCup)); } // сколько кружек в дневной норме
+function waterCount(k){ return (state.water && state.water[k]) || 0; }
+function renderWater(){
+  const k = todayKey();
+  const count = waterCount(k);
+  const goal = waterGoalCups();
+  const cupMl = state.waterCup;
+  const drunkMl = count * cupMl;
+  const pct = goal ? Math.min(100, Math.round(count/goal*100)) : 0;
+  const done = count >= goal;
+  const remaining = Math.max(0, goal - count);
+
+  let html = '<div class="p-head"><div class="date">💧 Вода</div>'
+           + '<div class="daynum">'+cap(fmt(k,{weekday:'long',day:'numeric',month:'long'}))+'</div></div>';
+
+  html += '<div class="water-card">'
+        + '<div class="water-big">'+count+' <span class="water-of">/ '+goal+'</span></div>'
+        + '<div class="water-unit">'+cupsWord(count)+' · '+drunkMl+' мл из '+state.waterGoalMl+' мл</div>'
+        + '<div class="bar" style="margin-top:14px"><div class="bar-fill'+(done?' ok':'')+'" style="width:'+pct+'%"></div></div>'
+        + '<div class="water-status">'+(done
+            ? '🎉 Норма на сегодня выполнена!'
+            : 'Осталось '+remaining+' '+cupsWord(remaining))+'</div>'
+        + '</div>';
+
+  // визуальные кружки: заполненные ярко, пустые — бледные; выпитое сверх нормы тоже показываем
+  const shown = Math.max(goal, count);
+  html += '<div class="cups">';
+  for(let i=0;i<shown;i++){ html += '<span class="cup'+(i<count?' full':'')+'">🥛</span>'; }
+  html += '</div>';
+
+  html += '<div class="water-btns">'
+        + '<button type="button" class="water-minus" data-water="minus"'+(count<=0?' disabled':'')+' aria-label="Убрать кружку">−</button>'
+        + '<button type="button" class="water-plus" data-water="plus">+ Выпил кружку</button>'
+        + '</div>';
+  html += '<div class="hint" style="text-align:center">1 кружка = '+cupMl+' мл · цель '+state.waterGoalMl+' мл в день.<br>Изменить норму и объём — во вкладке «Настройки».</div>';
+
+  document.getElementById('screen-water').innerHTML = html;
+}
+
 /* ---- Экран «Прогресс» ---- */
 function renderProgress(){
   const k = todayKey(), start = state.startDate;
@@ -610,6 +682,10 @@ function renderSettings(){
     + '<div id="apptList">'+apptRowsHTML()+'</div>'
     + '<button class="btn" id="apptAdd" style="margin-top:2px">+ Добавить приём</button>'
     + '<div class="hint">Дата и, при желании, подпись (например, «5–6 ноября»). Ближайший приём показывается на главном экране с обратным отсчётом.</div></div>'
+    + '<div class="setcard"><div class="setlabel">💧 Вода — дневная норма</div>'
+    + '<div class="water-set"><label>Цель в день, мл<input type="number" id="waterGoal" min="500" step="100" value="'+state.waterGoalMl+'"></label>'
+    + '<label>Объём кружки, мл<input type="number" id="waterCup" min="50" step="50" value="'+state.waterCup+'"></label></div>'
+    + '<div class="hint">Сейчас это '+waterGoalCups()+' '+cupsWord(waterGoalCups())+' в день. Ориентир — ~30–35 мл на кг веса; с учётом креатина около 3 л.</div></div>'
     + '<div class="setcard"><div class="setlabel">Резервная копия</div>'
     + '<div class="btnrow"><button class="btn" id="exportBtn">⬇️ Экспорт (JSON)</button>'
     + '<button class="btn" id="importBtn">⬆️ Импорт (JSON)</button>'
@@ -635,12 +711,23 @@ function renderSettings(){
   document.getElementById('apptAdd').addEventListener('click', ()=>{
     state.appointments.push({ date:todayKey(), label:'' }); save(); renderSettings();
   });
+  document.getElementById('waterGoal').addEventListener('change', e=>{
+    const v=parseInt(e.target.value,10);
+    if(v>0){ state.waterGoalMl=v; save(); renderSettings(); toast('Норма воды обновлена'); }
+    else { e.target.value=state.waterGoalMl; }
+  });
+  document.getElementById('waterCup').addEventListener('change', e=>{
+    const v=parseInt(e.target.value,10);
+    if(v>0){ state.waterCup=v; save(); renderSettings(); toast('Объём кружки обновлён'); }
+    else { e.target.value=state.waterCup; }
+  });
   document.getElementById('exportBtn').addEventListener('click', exportData);
   document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', importData);
   document.getElementById('resetBtn').addEventListener('click', ()=>{
     if(confirm('Удалить все данные и историю? Действие необратимо.')){
-      state={ startDate:DEFAULT_START, appointments:DEFAULT_APPTS.map(a=>({...a})), eyesEnd:null, stopped:{}, history:{} };
+      state={ startDate:DEFAULT_START, appointments:DEFAULT_APPTS.map(a=>({...a})), eyesEnd:null, stopped:{}, history:{},
+        water:{}, waterCup:WATER_CUP_DEFAULT, waterGoalMl:WATER_GOAL_DEFAULT };
       save(); renderSettings(); toast('Данные удалены');
     }
   });
@@ -668,6 +755,9 @@ function importData(e){
         state.eyesEnd = (typeof p.eyesEnd==='string') ? p.eyesEnd : null;
         state.stopped = (p.stopped && typeof p.stopped==='object') ? p.stopped : {};
         state.history = (p.history && typeof p.history==='object') ? p.history : {};
+        state.water = (p.water && typeof p.water==='object') ? p.water : {};
+        state.waterCup = (typeof p.waterCup==='number' && p.waterCup>0) ? p.waterCup : WATER_CUP_DEFAULT;
+        state.waterGoalMl = (typeof p.waterGoalMl==='number' && p.waterGoalMl>0) ? p.waterGoalMl : WATER_GOAL_DEFAULT;
         save(); viewDate = todayKey(); go('today'); toast('Данные загружены');
       }
     }catch(err){ toast('⚠️ Не удалось прочитать файл'); }
@@ -684,6 +774,7 @@ function go(screen){
   if(screen==='today') renderToday();
   else if(screen==='eyes') renderEyes();
   else if(screen==='supp') renderSupp();
+  else if(screen==='water') renderWater();
   else if(screen==='progress') renderProgress();
   else if(screen==='history') renderHistory();
   else if(screen==='settings') renderSettings();
@@ -768,6 +859,18 @@ attachChecklistHandlers(document.getElementById('screen-supp'));
 document.getElementById('screen-history').addEventListener('click', e=>{
   const b=e.target.closest('.hedit'); if(!b) return;
   viewDate = b.dataset.day; go('today'); toast('Открыт день для отметок');
+});
+// «Вода»: + / − кружки за сегодня
+document.getElementById('screen-water').addEventListener('click', e=>{
+  const b=e.target.closest('[data-water]'); if(!b) return;
+  const k=todayKey();
+  if(!state.water) state.water={};
+  let c = state.water[k]||0;
+  if(b.dataset.water==='plus') c++;
+  else if(b.dataset.water==='minus') c=Math.max(0, c-1);
+  if(c<=0) delete state.water[k]; else state.water[k]=c;
+  save(); renderWater();
+  if(b.dataset.water==='plus' && c===waterGoalCups()) toast('🎉 Норма на сегодня выполнена!');
 });
 
 /* ---- Авто-обновление при смене реального дня (открыли вкладку на следующий день) ---- */
