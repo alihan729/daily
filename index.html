@@ -244,7 +244,7 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
 'use strict';
 const KEY = 'acneTracker.v1';
 const SCHEMA = 3; // версия данных (для миграций)
-const APP_VERSION = 2; // версия приложения для авто-обновления PWA — ДЕРЖАТЬ В СИНХРОНЕ с version.json (при каждом деплое поднимать оба)
+const APP_VERSION = 3; // версия приложения для авто-обновления PWA — ДЕРЖАТЬ В СИНХРОНЕ с version.json (при каждом деплое поднимать оба)
 const DEFAULT_START = '2026-08-31'; // старт курса — 31 августа 2026
 // Приёмы у врача по умолчанию (редактируются в «Настройках»)
 const DEFAULT_APPTS = [
@@ -646,14 +646,18 @@ function renderHistory(){
     const totReq=sReq+eReq+cReq, totDone=sDone+eDone+cDone;
     const allDone = totReq>0 && totDone===totReq;
     // счёт раздельно по разделам (кожа / глаза / добавки), если раздел активен в этот день
+    const wc = waterCount(dk); // выпито кружек воды в этот день (0 = нет записи, напр. до появления раздела)
     const parts=['🧴 '+sDone+'/'+sReq];
     if(eReq>0) parts.push('👁 '+eDone+'/'+eReq);
     if(cReq>0) parts.push('💊 '+cDone+'/'+cReq);
-    const countStr = (eReq>0||cReq>0) ? parts.join(' · ') : (sDone+' / '+sReq);
+    if(wc>0) parts.push('💧 '+wc);
+    const countStr = (eReq>0||cReq>0||wc>0) ? parts.join(' · ') : (sDone+' / '+sReq);
+    const bodyLines = names.map(n=>'✓ '+n);
+    if(wc>0) bodyLines.push('💧 Вода: '+wc+' '+cupsWord(wc)+' · '+(wc*state.waterCup)+' мл');
     rows.push('<details class="hday"'+(dk===k?' open':'')+'><summary>'
       + '<span class="hdate">'+cap(fmt(dk,{weekday:'short',day:'numeric',month:'long'}))+' · день '+cd+'</span>'
       + '<span class="hcount'+(allDone?' ok':'')+'">'+countStr+'</span></summary>'
-      + '<div class="hbody">'+(names.length?names.map(n=>'✓ '+n).join('<br>'):'ничего не отмечено')
+      + '<div class="hbody">'+(bodyLines.length?bodyLines.join('<br>'):'ничего не отмечено')
       + '<br><button type="button" class="hedit" data-day="'+dk+'">✏️ Отмечать в этом дне</button></div></details>');
     if(rows.length>=200) break;
   }
