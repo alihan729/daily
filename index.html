@@ -35,11 +35,19 @@
 }}
 html,body{background:var(--bg);color:var(--ink)}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  -webkit-font-smoothing:antialiased;padding-bottom:78px;line-height:1.35}
+  -webkit-font-smoothing:antialiased;padding-bottom:calc(78px + env(safe-area-inset-bottom));line-height:1.35}
 .appbar{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);
   padding:13px 18px;font-weight:800;font-size:16px;letter-spacing:-.2px}
 main{max-width:640px;margin:0 auto;padding:16px 14px 24px}
 .screen.hidden{display:none}
+.storage-notice{max-width:612px;margin:12px auto 0;padding:12px 14px;border:1px solid var(--danger-line);border-radius:12px;color:var(--danger);background:var(--card);font-size:14px}
+.storage-notice[hidden]{display:none}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:3px}
+.completed-list{margin:18px 0;border:1px solid var(--line);border-radius:14px;padding:0 12px;background:var(--card)}
+.completed-list>summary{padding:16px 2px;cursor:pointer;color:var(--muted);font-size:14px;font-weight:700}
+.completed-list .task{box-shadow:none}
+.completed-list .task.done{opacity:1}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none !important;animation:none !important}}
 
 /* Today header */
 .today-head .daynav{display:flex;align-items:center;gap:10px}
@@ -147,7 +155,7 @@ button,.task.clickable,.hday summary{touch-action:manipulation;-webkit-tap-highl
 /* History */
 .hday{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;
   box-shadow:var(--shadow);overflow:hidden}
-.hday summary{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+.hday summary{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:12px 14px;
   cursor:pointer;list-style:none;font-size:14px;gap:10px}
 .hday summary::-webkit-details-marker{display:none}
 .hdate{font-weight:600}
@@ -179,11 +187,12 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
 /* Bottom nav */
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);
   border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
-.tab{flex:1;background:none;border:none;padding:9px 0 10px;display:flex;flex-direction:column;
+.tab{flex:1;min-width:0;background:none;border:none;padding:9px 0 10px;display:flex;flex-direction:column;
   align-items:center;gap:3px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
 .tab .ti{font-size:19px;line-height:1;filter:grayscale(.4);opacity:.8}
 .tab.active{color:var(--primary-ink)}
 .tab.active .ti{filter:none;opacity:1}
+@media(max-width:360px){.tab{font-size:9px}.task{gap:9px;padding:12px 10px}.task .chip{padding:4px 6px;font-size:11px}}
 
 /* Toast */
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(18px);
@@ -219,6 +228,7 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
 <header class="appbar">🧴 Трекер лечения</header>
 
 <main>
+  <div id="storageNotice" class="storage-notice" role="alert" hidden></div>
   <section id="screen-today" class="screen"></section>
   <section id="screen-eyes" class="screen hidden"></section>
   <section id="screen-supp" class="screen hidden"></section>
@@ -238,13 +248,17 @@ input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);borde
   <button class="tab" data-screen="settings"><span class="ti">⚙️</span><span>Настройки</span></button>
 </nav>
 
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status"></div>
+<div id="updateNotice" class="storage-notice" role="status" hidden style="position:fixed;left:14px;right:14px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:15">
+  Доступно обновление. Сохраните ввод перед установкой.
+  <button type="button" class="linkbtn" id="applyUpdate">Обновить</button>
+</div>
 
 <script>
 'use strict';
 const KEY = 'acneTracker.v1';
 const SCHEMA = 3; // версия данных (для миграций)
-const APP_VERSION = 3; // версия приложения для авто-обновления PWA — ДЕРЖАТЬ В СИНХРОНЕ с version.json (при каждом деплое поднимать оба)
+const APP_VERSION = 4; // версия приложения для авто-обновления PWA — ДЕРЖАТЬ В СИНХРОНЕ с version.json (при каждом деплое поднимать оба)
 const DEFAULT_START = '2026-08-31'; // старт курса — 31 августа 2026
 // Приёмы у врача по умолчанию (редактируются в «Настройках»)
 const DEFAULT_APPTS = [
@@ -344,28 +358,26 @@ function nextAppt(){ const t=todayKey(); const up=sortedAppts().filter(a=>dayDif
 
 /* ---- Состояние ---- */
 const WATER_CUP_DEFAULT = 300;    // объём одной кружки, мл
-const WATER_GOAL_DEFAULT = 3000;  // дневная норма, мл (~30–35 мл/кг + запас на креатин)
+const WATER_GOAL_DEFAULT = 3000;  // исходная пользовательская цель, мл
 let state = { startDate: DEFAULT_START, appointments: DEFAULT_APPTS.map(a=>({...a})), eyesEnd: null, stopped:{}, history:{},
-  water:{}, waterCup: WATER_CUP_DEFAULT, waterGoalMl: WATER_GOAL_DEFAULT };
+  water:{}, waterLog:{}, waterCup: WATER_CUP_DEFAULT, waterGoalMl: WATER_GOAL_DEFAULT };
+let savedState = JSON.stringify(state);
+let storageBlocked = false;
 let lastRenderedDay = ''; // для авто-обновления при смене реального дня
 let viewDate = todayKey(); // какой день показан на экране «Сегодня» (можно листать назад)
 function load(){
   try{
     const raw = localStorage.getItem(KEY);
-    if(raw){ const p = JSON.parse(raw);
-      if(p && typeof p==='object'){
-        if(typeof p.startDate==='string') state.startDate = p.startDate;
-        if(Array.isArray(p.appointments)) state.appointments = p.appointments;
-        state.eyesEnd = (typeof p.eyesEnd==='string') ? p.eyesEnd : null;
-        state.stopped = (p.stopped && typeof p.stopped==='object') ? p.stopped : {};
-        state.history = (p.history && typeof p.history==='object') ? p.history : {};
-        if(p.water && typeof p.water==='object') state.water = p.water;
-        if(typeof p.waterCup==='number' && p.waterCup>0) state.waterCup = p.waterCup;
-        if(typeof p.waterGoalMl==='number' && p.waterGoalMl>0) state.waterGoalMl = p.waterGoalMl;
-        if(p.v !== SCHEMA) migrate();
-      }
+    if(raw){
+      const p = JSON.parse(raw);
+      state = validateData(p);
+      savedState = JSON.stringify(state);
+      if(p.v !== SCHEMA) migrate();
     }
-  }catch(e){ console.warn('load failed', e); }
+  }catch(e){
+    storageBlocked = true;
+    showStorageError('Не удалось прочитать сохранённые данные. Исходная запись сохранена; новые отметки пока не записываются. Сохраните исходную копию через «Экспорт» в настройках.');
+  }
 }
 function migrate(){
   // v<2: убрать старый авто-приём 28.09.2026 (пустая подпись)
@@ -375,9 +387,64 @@ function migrate(){
     (a && a.date==='2026-11-05' && a.label==='5–6 ноября 2026') ? { date:'2026-10-05', label:'5–6 октября 2026' } : a);
   save(); // пересохраняем уже с актуальной версией
 }
-function save(){
-  try{ localStorage.setItem(KEY, JSON.stringify(Object.assign({v:SCHEMA}, state))); }
-  catch(e){ console.warn('save failed', e); toast('⚠️ Не удалось сохранить'); }
+function showStorageError(message){
+  const notice=document.getElementById('storageNotice'); notice.textContent=message; notice.hidden=false;
+}
+function save(allowRecovery=false){
+  try{
+    if(storageBlocked && !allowRecovery) throw new Error('Storage needs recovery');
+    localStorage.setItem(KEY, JSON.stringify(Object.assign({v:SCHEMA}, state)));
+    savedState=JSON.stringify(state); storageBlocked=false;
+    document.getElementById('storageNotice').hidden=true;
+    return true;
+  }catch(e){
+    state=JSON.parse(savedState);
+    showStorageError('Не удалось сохранить. Последнее изменение отменено. Проверьте свободное место и сохраните резервную копию.');
+    toast('⚠️ Изменение не сохранено'); return false;
+  }
+}
+
+function validDate(k){ return typeof k==='string' && /^\d{4}-\d{2}-\d{2}$/.test(k) && keyOf(parseKey(k))===k; }
+function validateData(p){
+  const object=v=>v && typeof v==='object' && !Array.isArray(v);
+  const fail=()=>{ throw new Error('Некорректная резервная копия'); };
+  const safeKey=k=>!['__proto__','constructor','prototype'].includes(k);
+  const positive=v=>Number.isSafeInteger(v) && v>0 && v<=1000000;
+  if(!object(p) || !validDate(p.startDate) || !object(p.history) || (p.app!=null && p.app!=='daily') ||
+    (p.v!=null && (!Number.isInteger(p.v) || p.v<1 || p.v>SCHEMA))) fail();
+  const out={startDate:p.startDate, appointments:[], eyesEnd:p.eyesEnd==null?null:p.eyesEnd, stopped:{}, history:{}, water:{}, waterLog:{},
+    waterCup:p.waterCup==null?WATER_CUP_DEFAULT:p.waterCup, waterGoalMl:p.waterGoalMl==null?WATER_GOAL_DEFAULT:p.waterGoalMl};
+  if(!positive(out.waterCup) || !positive(out.waterGoalMl) || (out.eyesEnd!==null && !validDate(out.eyesEnd))) fail();
+  const appts=p.appointments==null?DEFAULT_APPTS:p.appointments;
+  if(!Array.isArray(appts)) fail();
+  for(const a of appts){
+    if(!object(a) || (a.date!=='' && !validDate(a.date)) || (a.label!=null && typeof a.label!=='string')) fail();
+    out.appointments.push({date:a.date,label:a.label||''});
+  }
+  if(p.stopped!=null && !object(p.stopped)) fail();
+  for(const [name,date] of Object.entries(p.stopped||{})){
+    if(!safeKey(name) || !validDate(date)) fail(); out.stopped[name]=date;
+  }
+  for(const [day,marks] of Object.entries(p.history)){
+    if(!validDate(day) || !object(marks)) fail();
+    out.history[day]={};
+    for(const [id,on] of Object.entries(marks)){
+      if(!safeKey(id) || typeof on!=='boolean') fail();
+      if(on) out.history[day][id]=true;
+    }
+  }
+  if(p.water!=null && !object(p.water)) fail();
+  if(p.waterLog!=null && !object(p.waterLog)) fail();
+  for(const [day,count] of Object.entries(p.water||{})){
+    if(!validDate(day) || !Number.isInteger(count) || count<0 || count>10000) fail();
+    const log=p.waterLog && Object.prototype.hasOwnProperty.call(p.waterLog,day)?p.waterLog[day]:Array(count).fill(out.waterCup);
+    if(!Array.isArray(log) || log.length!==count || !log.every(positive)) fail();
+    if(count){ out.water[day]=count; out.waterLog[day]=log.slice(); }
+  }
+  for(const day of Object.keys(p.waterLog||{})){
+    if(!Object.prototype.hasOwnProperty.call(p.water||{},day)) fail();
+  }
+  return out;
 }
 function isChecked(id, k){ return !!(state.history[k] && state.history[k][id]); }
 
@@ -501,13 +568,21 @@ function renderChecklist(course, elId){
           + '<div class="bar"><div class="bar-fill'+(allDone?' ok':'')+'" style="width:'+pct+'%"></div></div></div>';
   }
 
+  const completed=TASKS.filter(t=>(t.course||'skin')===course && statusOf(t,vk).s==='completed');
   for(const b of BLOCKS){
     if((b.course||'skin')!==course) continue;
+    const visibleTasks=TASKS.filter(t=>(t.course||'skin')===course && t.block===b.id && statusOf(t,vk).s!=='completed');
+    if(!visibleTasks.length) continue;
     html += '<section class="block"><div class="block-head"><span class="block-icon">'+b.icon+'</span>'
           + '<span class="block-title">'+b.title+'</span><span class="block-sub">'+b.subtitle+'</span></div>';
     if(b.note) html += '<div class="block-note">'+b.note+'</div>';
-    for(const t of TASKS){ if((t.course||'skin')===course && t.block===b.id) html += cardHTML(t, vk); }
+    for(const t of visibleTasks) html += cardHTML(t, vk);
     html += '</section>';
+  }
+  if(completed.length){
+    html+='<details class="completed-list"><summary>Завершённые и остановленные · '+completed.length+'</summary>';
+    for(const t of completed) html+=cardHTML(t,vk);
+    html+='</details>';
   }
   // Кнопка остановки — только на «Глаза», сегодня, пока уход активен
   if(isEyes && isToday && !state.eyesEnd){
@@ -523,33 +598,35 @@ function renderSupp(){ renderChecklist('supplements', 'screen-supp'); }
 function cupsWord(n){ return plural(n,'кружка','кружки','кружек'); }
 function waterGoalCups(){ return Math.max(1, Math.ceil(state.waterGoalMl / state.waterCup)); } // сколько кружек в дневной норме
 function waterCount(k){ return (state.water && state.water[k]) || 0; }
+function waterMl(k){ return (state.waterLog[k]||[]).reduce((total,ml)=>total+ml,0); }
 function renderWater(){
   const k = todayKey();
   const count = waterCount(k);
-  const goal = waterGoalCups();
   const cupMl = state.waterCup;
-  const drunkMl = count * cupMl;
-  const pct = goal ? Math.min(100, Math.round(count/goal*100)) : 0;
-  const done = count >= goal;
-  const remaining = Math.max(0, goal - count);
+  const drunkMl = waterMl(k);
+  const pct = Math.min(100, Math.round(drunkMl/state.waterGoalMl*100));
+  const done = drunkMl >= state.waterGoalMl;
+  const remaining = Math.max(0, state.waterGoalMl - drunkMl);
 
   let html = '<div class="p-head"><div class="date">💧 Вода</div>'
            + '<div class="daynum">'+cap(fmt(k,{weekday:'long',day:'numeric',month:'long'}))+'</div></div>';
 
   html += '<div class="water-card">'
-        + '<div class="water-big">'+count+' <span class="water-of">/ '+goal+'</span></div>'
-        + '<div class="water-unit">'+cupsWord(count)+' · '+drunkMl+' мл из '+state.waterGoalMl+' мл</div>'
+        + '<div class="water-big">'+drunkMl+' <span class="water-of">мл</span></div>'
+        + '<div class="water-unit">из '+state.waterGoalMl+' мл · '+count+' '+cupsWord(count)+'</div>'
         + '<div class="bar" style="margin-top:14px"><div class="bar-fill'+(done?' ok':'')+'" style="width:'+pct+'%"></div></div>'
         + '<div class="water-status">'+(done
             ? '🎉 Норма на сегодня выполнена!'
-            : 'Осталось '+remaining+' '+cupsWord(remaining))+'</div>'
+            : 'До цели осталось '+remaining+' мл')+'</div>'
         + '</div>';
 
   // визуальные кружки: заполненные ярко, пустые — бледные; выпитое сверх нормы тоже показываем
-  const shown = Math.max(goal, count);
-  html += '<div class="cups">';
+  const expectedCups=count+Math.ceil(remaining/cupMl);
+  const shown = Math.min(24, expectedCups);
+  html += '<div class="cups" aria-hidden="true">';
   for(let i=0;i<shown;i++){ html += '<span class="cup'+(i<count?' full':'')+'">🥛</span>'; }
   html += '</div>';
+  if(expectedCups>shown) html+='<div class="hint" style="text-align:center;margin-bottom:12px">Показаны первые '+shown+' кружки; полный объём учтён выше.</div>';
 
   html += '<div class="water-btns">'
         + '<button type="button" class="water-minus" data-water="minus"'+(count<=0?' disabled':'')+' aria-label="Убрать кружку">−</button>'
@@ -653,11 +730,11 @@ function renderHistory(){
     if(wc>0) parts.push('💧 '+wc);
     const countStr = (eReq>0||cReq>0||wc>0) ? parts.join(' · ') : (sDone+' / '+sReq);
     const bodyLines = names.map(n=>'✓ '+n);
-    if(wc>0) bodyLines.push('💧 Вода: '+wc+' '+cupsWord(wc)+' · '+(wc*state.waterCup)+' мл');
+    if(wc>0) bodyLines.push('💧 Вода: '+wc+' '+cupsWord(wc)+' · '+waterMl(dk)+' мл');
     rows.push('<details class="hday"'+(dk===k?' open':'')+'><summary>'
       + '<span class="hdate">'+cap(fmt(dk,{weekday:'short',day:'numeric',month:'long'}))+' · день '+cd+'</span>'
       + '<span class="hcount'+(allDone?' ok':'')+'">'+countStr+'</span></summary>'
-      + '<div class="hbody">'+(bodyLines.length?bodyLines.join('<br>'):'ничего не отмечено')
+      + '<div class="hbody">'+(bodyLines.length?bodyLines.map(esc).join('<br>'):'ничего не отмечено')
       + '<br><button type="button" class="hedit" data-day="'+dk+'">✏️ Отмечать в этом дне</button></div></details>');
     if(rows.length>=200) break;
   }
@@ -670,9 +747,9 @@ function apptRowsHTML(){
   if(!state.appointments.length) return '<div class="hint" style="margin:0 0 8px">Пока нет приёмов.</div>';
   return state.appointments.map((a,i)=>
     '<div class="apptrow" data-i="'+i+'">'
-    + '<input type="date" data-field="date" value="'+esc(a.date||'')+'">'
-    + '<input type="text" class="atext" data-field="label" placeholder="подпись (необяз.)" value="'+esc(a.label||'')+'">'
-    + '<button class="del" data-del="'+i+'" title="Удалить приём">×</button></div>'
+    + '<input type="date" data-field="date" aria-label="Дата приёма" value="'+esc(a.date||'')+'">'
+    + '<input type="text" class="atext" data-field="label" aria-label="Подпись приёма" placeholder="подпись (необяз.)" value="'+esc(a.label||'')+'">'
+    + '<button class="del" data-del="'+i+'" aria-label="Удалить приём" title="Удалить приём">×</button></div>'
   ).join('');
 }
 function renderSettings(){
@@ -688,9 +765,9 @@ function renderSettings(){
     + '<button class="btn" id="apptAdd" style="margin-top:2px">+ Добавить приём</button>'
     + '<div class="hint">Дата и, при желании, подпись (например, «5–6 ноября»). Ближайший приём показывается на главном экране с обратным отсчётом.</div></div>'
     + '<div class="setcard"><div class="setlabel">💧 Вода — дневная норма</div>'
-    + '<div class="water-set"><label>Цель в день, мл<input type="number" id="waterGoal" min="500" step="100" value="'+state.waterGoalMl+'"></label>'
-    + '<label>Объём кружки, мл<input type="number" id="waterCup" min="50" step="50" value="'+state.waterCup+'"></label></div>'
-    + '<div class="hint">Сейчас это '+waterGoalCups()+' '+cupsWord(waterGoalCups())+' в день. Ориентир — ~30–35 мл на кг веса; с учётом креатина около 3 л.</div></div>'
+    + '<div class="water-set"><label>Цель в день, мл<input type="number" id="waterGoal" min="1" max="1000000" step="1" value="'+state.waterGoalMl+'"></label>'
+    + '<label>Объём кружки, мл<input type="number" id="waterCup" min="1" max="1000000" step="1" value="'+state.waterCup+'"></label></div>'
+    + '<div class="hint">Сейчас это около '+waterGoalCups()+' '+cupsWord(waterGoalCups())+' в день. Новый объём кружки применяется только к следующим записям. Уже выпитые миллилитры сохраняются.</div></div>'
     + '<div class="setcard"><div class="setlabel">Резервная копия</div>'
     + '<div class="btnrow"><button class="btn" id="exportBtn">⬇️ Экспорт (JSON)</button>'
     + '<button class="btn" id="importBtn">⬆️ Импорт (JSON)</button>'
@@ -698,33 +775,36 @@ function renderSettings(){
     + '<div class="hint">Данные хранятся только в этом браузере. Экспортируйте файл, чтобы не потерять журнал.</div></div>'
     + '<div class="setcard"><div class="setlabel">Сброс</div>'
     + '<button class="btn btn-danger" id="resetBtn">Удалить все данные</button></div>'
-    + '<div class="about">Локальный трекер лечения<br>данные не покидают устройство</div>';
+    + '<div class="about">Локальный трекер лечения · версия '+APP_VERSION+'<br>данные не покидают устройство</div>';
 
   document.getElementById('startInput').addEventListener('change', e=>{
-    if(e.target.value){ state.startDate=e.target.value; save(); renderSettings(); toast('Дата начала обновлена'); }
+    if(validDate(e.target.value)){ state.startDate=e.target.value; const ok=save(); renderSettings(); if(ok) toast('Дата начала обновлена'); }
   });
   const listEl = document.getElementById('apptList');
   listEl.addEventListener('change', e=>{
     const row=e.target.closest('.apptrow'); if(!row) return;
     const i=+row.dataset.i, f=e.target.dataset.field;
-    if(f && state.appointments[i]){ state.appointments[i][f]=e.target.value; save(); }
+    if((f==='label' || (f==='date' && (!e.target.value || validDate(e.target.value)))) && state.appointments[i]){
+      state.appointments[i][f]=e.target.value; if(!save()) renderSettings();
+    }
   });
   listEl.addEventListener('click', e=>{
     const del=e.target.closest('.del'); if(!del) return;
-    state.appointments.splice(+del.dataset.del, 1); save(); renderSettings(); toast('Приём удалён');
+    if(!confirm('Удалить этот приём из списка?')) return;
+    state.appointments.splice(+del.dataset.del, 1); const ok=save(); renderSettings(); if(ok) toast('Приём удалён');
   });
   document.getElementById('apptAdd').addEventListener('click', ()=>{
     state.appointments.push({ date:todayKey(), label:'' }); save(); renderSettings();
   });
   document.getElementById('waterGoal').addEventListener('change', e=>{
-    const v=parseInt(e.target.value,10);
-    if(v>0){ state.waterGoalMl=v; save(); renderSettings(); toast('Норма воды обновлена'); }
-    else { e.target.value=state.waterGoalMl; }
+    const v=Number(e.target.value);
+    if(e.target.validity.valid && Number.isSafeInteger(v) && v>0){ state.waterGoalMl=v; const ok=save(); renderSettings(); if(ok) toast('Цель воды обновлена'); }
+    else { e.target.value=state.waterGoalMl; toast('Укажите целое положительное число'); }
   });
   document.getElementById('waterCup').addEventListener('change', e=>{
-    const v=parseInt(e.target.value,10);
-    if(v>0){ state.waterCup=v; save(); renderSettings(); toast('Объём кружки обновлён'); }
-    else { e.target.value=state.waterCup; }
+    const v=Number(e.target.value);
+    if(e.target.validity.valid && Number.isSafeInteger(v) && v>0){ state.waterCup=v; const ok=save(); renderSettings(); if(ok) toast('Объём кружки обновлён'); }
+    else { e.target.value=state.waterCup; toast('Укажите целое положительное число'); }
   });
   document.getElementById('exportBtn').addEventListener('click', exportData);
   document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFile').click());
@@ -732,15 +812,20 @@ function renderSettings(){
   document.getElementById('resetBtn').addEventListener('click', ()=>{
     if(confirm('Удалить все данные и историю? Действие необратимо.')){
       state={ startDate:DEFAULT_START, appointments:DEFAULT_APPTS.map(a=>({...a})), eyesEnd:null, stopped:{}, history:{},
-        water:{}, waterCup:WATER_CUP_DEFAULT, waterGoalMl:WATER_GOAL_DEFAULT };
-      save(); renderSettings(); toast('Данные удалены');
+        water:{}, waterLog:{}, waterCup:WATER_CUP_DEFAULT, waterGoalMl:WATER_GOAL_DEFAULT };
+      const ok=save(true); renderSettings(); if(ok) toast('Данные удалены');
     }
   });
 }
 
 /* ---- Экспорт / импорт ---- */
 function exportData(){
-  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  let content=JSON.stringify(Object.assign({app:'daily',v:SCHEMA},state),null,2);
+  if(storageBlocked){
+    try{ const raw=localStorage.getItem(KEY); if(raw) content=raw; else { toast('Исходная запись недоступна'); return; } }
+    catch(error){ toast('Не удалось прочитать исходную запись'); return; }
+  }
+  const blob = new Blob([content], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href=url; a.download='acne-tracker-'+todayKey()+'.json';
@@ -753,21 +838,16 @@ function importData(e){
   r.onload = ()=>{
     try{
       const p = JSON.parse(r.result);
-      if(!p || typeof p!=='object' || typeof p.startDate!=='string') throw new Error('bad shape');
+      const replacement=validateData(p);
       if(confirm('Заменить текущие данные загруженными?')){
-        state.startDate = p.startDate;
-        state.appointments = Array.isArray(p.appointments) ? p.appointments : DEFAULT_APPTS.map(a=>({...a}));
-        state.eyesEnd = (typeof p.eyesEnd==='string') ? p.eyesEnd : null;
-        state.stopped = (p.stopped && typeof p.stopped==='object') ? p.stopped : {};
-        state.history = (p.history && typeof p.history==='object') ? p.history : {};
-        state.water = (p.water && typeof p.water==='object') ? p.water : {};
-        state.waterCup = (typeof p.waterCup==='number' && p.waterCup>0) ? p.waterCup : WATER_CUP_DEFAULT;
-        state.waterGoalMl = (typeof p.waterGoalMl==='number' && p.waterGoalMl>0) ? p.waterGoalMl : WATER_GOAL_DEFAULT;
-        save(); viewDate = todayKey(); go('today'); toast('Данные загружены');
+        state=replacement;
+        if(!save(true)){ renderSettings(); return; }
+        viewDate = todayKey(); go('today'); toast('Данные загружены');
       }
-    }catch(err){ toast('⚠️ Не удалось прочитать файл'); }
+    }catch(err){ toast('⚠️ Копия повреждена или не подходит. Данные не изменены.'); }
     finally{ e.target.value=''; }
   };
+  r.onerror=()=>{ e.target.value=''; toast('⚠️ Не удалось прочитать файл'); };
   r.readAsText(file);
 }
 
@@ -776,6 +856,7 @@ function go(screen){
   lastRenderedDay = todayKey();
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('hidden', s.id!=='screen-'+screen));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.screen===screen));
+  document.querySelectorAll('.tab').forEach(t=>{ if(t.dataset.screen===screen) t.setAttribute('aria-current','page'); else t.removeAttribute('aria-current'); });
   if(screen==='today') renderToday();
   else if(screen==='eyes') renderEyes();
   else if(screen==='supp') renderSupp();
@@ -784,6 +865,7 @@ function go(screen){
   else if(screen==='history') renderHistory();
   else if(screen==='settings') renderSettings();
   window.scrollTo(0,0);
+  applyAvailableUpdate();
 }
 
 /* ---- Toast ---- */
@@ -802,10 +884,14 @@ function renderActiveChecklist(){
 }
 function toggleTask(id){
   const k=viewDate; // отмечаем в том дне, который сейчас открыт
+  const task=TASKS.find(t=>t.id===id);
+  if(!task || statusOf(task,k).s!=='active') return;
   if(!state.history[k]) state.history[k]={};
   if(state.history[k][id]) delete state.history[k][id]; else state.history[k][id]=true;
   if(Object.keys(state.history[k]).length===0) delete state.history[k];
   save(); renderActiveChecklist();
+  const card=document.querySelector('.screen:not(.hidden) [data-task="'+id+'"]');
+  if(card) card.focus({preventScroll:true});
 }
 function setViewDate(k){
   const today=todayKey();
@@ -817,19 +903,19 @@ function setViewDate(k){
 function handleEyes(action){
   if(action==='finish'){
     if(confirm('Завершить уход за глазами? Пункты станут неактивными. Прошлые дни и историю можно смотреть, а позже — возобновить.')){
-      state.eyesEnd = todayKey(); save(); renderEyes(); toast('Уход за глазами остановлен');
+      state.eyesEnd = todayKey(); const ok=save(); renderEyes(); if(ok) toast('Уход за глазами остановлен');
     }
   } else if(action==='resume'){
-    state.eyesEnd = null; save(); renderEyes(); toast('Уход за глазами возобновлён');
+    state.eyesEnd = null; const ok=save(); renderEyes(); if(ok) toast('Уход за глазами возобновлён');
   }
 }
 function handleStopMed(action, name){
   if(action==='stop'){
     if(confirm('Пометить «'+name+'» как закончившийся? Он станет неактивным, остальные препараты останутся. Позже можно вернуть.')){
-      state.stopped[name] = todayKey(); save(); renderActiveChecklist(); toast('«'+name+'» — закончился');
+      state.stopped[name] = todayKey(); const ok=save(); renderActiveChecklist(); if(ok) toast('«'+name+'» — закончился');
     }
   } else {
-    delete state.stopped[name]; save(); renderActiveChecklist(); toast('«'+name+'» возобновлён');
+    delete state.stopped[name]; const ok=save(); renderActiveChecklist(); if(ok) toast('«'+name+'» возобновлён');
   }
 }
 function attachChecklistHandlers(el){
@@ -869,13 +955,17 @@ document.getElementById('screen-history').addEventListener('click', e=>{
 document.getElementById('screen-water').addEventListener('click', e=>{
   const b=e.target.closest('[data-water]'); if(!b) return;
   const k=todayKey();
-  if(!state.water) state.water={};
-  let c = state.water[k]||0;
-  if(b.dataset.water==='plus') c++;
-  else if(b.dataset.water==='minus') c=Math.max(0, c-1);
-  if(c<=0) delete state.water[k]; else state.water[k]=c;
-  save(); renderWater();
-  if(b.dataset.water==='plus' && c===waterGoalCups()) toast('🎉 Норма на сегодня выполнена!');
+  const wasDone=waterMl(k)>=state.waterGoalMl;
+  const log=state.waterLog[k]||(state.waterLog[k]=[]);
+  if(b.dataset.water==='plus'){
+    if(log.length>=10000){ toast('Достигнут предел записей за день'); return; }
+    log.push(state.waterCup);
+  }
+  else if(b.dataset.water==='minus') log.pop();
+  if(!log.length){ delete state.water[k]; delete state.waterLog[k]; }
+  else state.water[k]=log.length;
+  const ok=save(); renderWater();
+  if(ok && !wasDone && waterMl(k)>=state.waterGoalMl) toast('🎉 Цель на сегодня достигнута!');
 });
 
 /* ---- Авто-обновление при смене реального дня (открыли вкладку на следующий день) ---- */
@@ -896,6 +986,23 @@ window.addEventListener('focus', ()=>{ maybeRefreshDay(); checkForUpdate(); });
 // В index.html зашита APP_VERSION; рядом лежит version.json с актуальным номером.
 // Если на сервере версия новее запущенной — перезагружаемся на URL с ?v=N (другой адрес => мимо HTTP-кэша).
 let updCheckedAt = 0;
+let pendingVersion = null;
+function applyAvailableUpdate(force=false){
+  if(!pendingVersion) return;
+  const editing=document.querySelector('.tab.active')?.dataset.screen==='settings' || document.activeElement?.matches('input,textarea,select');
+  if(editing && !force){ document.getElementById('updateNotice').hidden=false; return; }
+  let tried=null;
+  try{ tried=sessionStorage.getItem('updTried'); }catch(error){}
+  if(tried===String(pendingVersion)) return;
+  try{ sessionStorage.setItem('updTried',String(pendingVersion)); }catch(error){}
+  location.replace(location.pathname+'?v='+pendingVersion);
+}
+document.getElementById('applyUpdate').addEventListener('click',()=>{
+  // Commit the focused setting before leaving the current document.
+  document.activeElement?.blur();
+  if(!document.getElementById('storageNotice').hidden){ toast('Сначала сохраните резервную копию'); return; }
+  applyAvailableUpdate(true);
+});
 async function checkForUpdate(){
   const now = Date.now();
   if(now - updCheckedAt < 20000) return; // не чаще раза в 20 секунд
@@ -905,12 +1012,9 @@ async function checkForUpdate(){
     if(!r.ok) return;
     const data = await r.json();
     const latest = Number(data && data.version);
-    if(!latest || latest <= APP_VERSION) return; // актуально или не распарсилось — ничего не делаем
-    let tried = null;
-    try{ tried = sessionStorage.getItem('updTried'); }catch(e){}
-    if(tried === String(latest)) return; // уже пробовали в этой сессии — защита от зацикливания
-    try{ sessionStorage.setItem('updTried', String(latest)); }catch(e){}
-    location.replace(location.pathname + '?v=' + latest); // жёсткая загрузка свежей версии
+    if(!Number.isSafeInteger(latest) || latest <= APP_VERSION) return;
+    pendingVersion=latest;
+    applyAvailableUpdate();
   }catch(e){ /* офлайн или version.json недоступен — работаем из кэша, тихо */ }
 }
 
@@ -923,6 +1027,9 @@ load();
 viewDate = todayKey(); // при запуске всегда открываем сегодня
 go('today');
 checkForUpdate(); // проверить, нет ли свежей версии на сервере
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(()=>{});
+}
 </script>
 </body>
 </html>
